@@ -51,6 +51,7 @@ import {
   faChartSimple,
   faMapLocationDot,
   faPaintbrush,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 
 export const icons = {
@@ -110,6 +111,9 @@ export const icons = {
   // PWA
   install:    faDownload,
   mobile:     faMobileScreen,
+
+  // UI
+  close:      faXmark,
 
   // utilidades
   recent:     faChartSimple,

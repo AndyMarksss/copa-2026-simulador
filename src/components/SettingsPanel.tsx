@@ -6,14 +6,17 @@ import { useToast } from './Toast';
 import { useInstallPWA } from '../hooks/useInstallPWA';
 import { Icon } from './Icon';
 import { icons } from '../utils/icons';
+import { HowToUseHeader, HowToUseSteps } from './HowToUseSteps';
 
 interface SettingsPanelProps {
   api: TournamentApi;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  /** Reabre o modal de "Como usar" (sem apagar a flag do localStorage). */
+  onShowInstructions?: () => void;
 }
 
-export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps) {
+export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }: SettingsPanelProps) {
   const toast = useToast();
   const { canInstall, isInstalled, installApp } = useInstallPWA();
 
@@ -69,35 +72,24 @@ export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps)
         </p>
       </header>
 
-      {/* 1. COMO USAR */}
+      {/* 1. COMO USAR — conteúdo vem de HowToUseSteps, compartilhado com o
+              FirstAccessModal para evitar duplicação. */}
       <section className="card card-pad bg-gradient-to-br from-brand-500/10 via-transparent to-brand-500/5 border-brand-500/25">
-        <header className="flex items-center gap-2 mb-3">
-          <Icon icon={icons.howToUse} className="text-2xl text-brand-500" />
-          <div>
-            <h3 className="font-display tracking-wider text-xl">Como usar</h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Cinco passos para simular toda a Copa.
-            </p>
-          </div>
-        </header>
+        <HowToUseHeader />
+        <HowToUseSteps />
 
-        <ol className="space-y-2.5 text-sm">
-          <Step n={1} title="Preencha ou simule a fase de grupos">
-            Toque em <strong>Grupos</strong> e edite os placares — ou use o botão <em>Simular fase de grupos</em> aqui embaixo para gerar resultados realistas.
-          </Step>
-          <Step n={2} title="Confira os classificados e os melhores 3ºs">
-            A tabela atualiza automaticamente. Os 24 classificados diretos + 8 melhores terceiros formam os 32 dos 16ª avos.
-          </Step>
-          <Step n={3} title="Preencha ou simule os 16ª avos">
-            Vá em <strong>16ª avos</strong> e decida os jogos da Rodada de 32. Empates abrem prorrogação e pênaltis automaticamente.
-          </Step>
-          <Step n={4} title="Acompanhe o chaveamento final">
-            Em <strong>Chave</strong>, oitavas → quartas → semifinais → final são preenchidas automaticamente. A disputa de 3º lugar aparece abaixo da final.
-          </Step>
-          <Step n={5} title="Salve ou restaure sua simulação">
-            Use <em>Exportar JSON</em> para baixar o estado do torneio, e <em>Importar JSON</em> para retomá-lo em outro momento.
-          </Step>
-        </ol>
+        {onShowInstructions && (
+          <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex justify-end">
+            <button
+              type="button"
+              className="text-[11px] font-semibold text-brand-700 dark:text-brand-300 hover:underline inline-flex items-center gap-1"
+              onClick={onShowInstructions}
+            >
+              <Icon icon={icons.howToUse} />
+              Ver instruções novamente
+            </button>
+          </div>
+        )}
       </section>
 
       {/* 2. INSTALAR APLICATIVO (PWA) */}
@@ -268,23 +260,5 @@ function Card({ title, icon, children }: { title: string; icon: IconDefinition; 
   );
 }
 
-function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (
-    <li className="flex items-start gap-3">
-      <span
-        className="
-          shrink-0 w-7 h-7 rounded-full
-          bg-gradient-to-br from-brand-600 to-brand-400 text-white
-          flex items-center justify-center font-bold text-[13px]
-          shadow-glow
-        "
-      >
-        {n}
-      </span>
-      <div className="min-w-0 leading-snug">
-        <div className="font-semibold text-slate-800 dark:text-slate-100">{title}</div>
-        <div className="text-[12.5px] text-slate-600 dark:text-slate-300">{children}</div>
-      </div>
-    </li>
-  );
-}
+// `Step` foi movido para `HowToUseSteps.tsx` para ser compartilhado com o
+// modal de primeiro acesso. Não há mais sub-componente Step local aqui.

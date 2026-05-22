@@ -7,9 +7,11 @@ import { GroupStage } from './components/GroupStage';
 import { RoundOf32 } from './components/RoundOf32';
 import { BracketView } from './components/BracketView';
 import { SettingsPanel } from './components/SettingsPanel';
+import { FirstAccessModal } from './components/FirstAccessModal';
 import { ToastProvider } from './components/Toast';
 import { useTheme } from './hooks/useTheme';
 import { useTournament } from './hooks/useTournament';
+import { useFirstAccessModal } from './hooks/useFirstAccessModal';
 import type { MatchFilterId } from './logic/matchStatus';
 import { APP_VERSION_LABEL, APP_LAST_UPDATED, formatLastUpdated } from './config/appVersion';
 
@@ -18,6 +20,10 @@ export default function App() {
   const api = useTournament();
   const [tab, setTab] = useState<TabId>('dashboard');
   const [matchFilter, setMatchFilter] = useState<MatchFilterId>('all');
+
+  // Modal de primeiro acesso (com flag em localStorage).
+  // O usuário também pode reabrir manualmente pela aba Configurações.
+  const firstAccess = useFirstAccessModal();
 
   // Navegação central: muda aba e opcionalmente pré-seleciona o filtro de jogos.
   const navigate = useCallback(
@@ -53,7 +59,12 @@ export default function App() {
             {tab === 'r32'       && <RoundOf32 state={api.state} api={api} />}
             {tab === 'bracket'   && <BracketView state={api.state} api={api} />}
             {tab === 'settings'  && (
-              <SettingsPanel api={api} theme={theme} onToggleTheme={toggle} />
+              <SettingsPanel
+                api={api}
+                theme={theme}
+                onToggleTheme={toggle}
+                onShowInstructions={firstAccess.open}
+              />
             )}
           </div>
 
@@ -75,16 +86,20 @@ export default function App() {
             <span>Atualizado em {formatLastUpdated(APP_LAST_UPDATED)}</span>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-600">·</span>
             <span>
+              por{' '}
               <a
                 href="https://github.com/AndyMarksss/copa-2026-simulador"
                 target="_blank" rel="noreferrer"
-                className="hover:underline hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
+                className="font-semibold text-brand-700 dark:text-brand-300 hover:underline transition-colors"
               >
-                GitHub
+                AndyMarksss
               </a>
             </span>
           </footer>
         </main>
+
+        {/* Modal de boas-vindas — aparece automaticamente no primeiro acesso */}
+        <FirstAccessModal open={firstAccess.isOpen} onClose={firstAccess.close} />
       </div>
     </ToastProvider>
   );
