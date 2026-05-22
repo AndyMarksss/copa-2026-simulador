@@ -1,20 +1,24 @@
 import React from 'react';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 
-export type TabId = 'dashboard' | 'groups' | 'r32' | 'bracket' | 'settings';
+export type TabId = 'dashboard' | 'matches' | 'groups' | 'r32' | 'bracket' | 'settings';
 
 interface TabDef {
   id: TabId;
   label: string;
   short: string;
-  icon: string;
+  icon: IconDefinition;
 }
 
 export const TABS: TabDef[] = [
-  { id: 'dashboard', label: 'Dashboard',         short: 'Início',   icon: '🏠' },
-  { id: 'groups',    label: 'Fase de Grupos',    short: 'Grupos',   icon: '🥅' },
-  { id: 'r32',       label: '16ª avos de Final', short: '16ª',      icon: '🎯' },
-  { id: 'bracket',   label: 'Chaveamento Final', short: 'Chave',    icon: '🏆' },
-  { id: 'settings',  label: 'Configurações',     short: 'Config',   icon: '⚙️' },
+  { id: 'dashboard', label: 'Início',             short: 'Início',  icon: icons.dashboard },
+  { id: 'matches',   label: 'Jogos',              short: 'Jogos',   icon: icons.matches },
+  { id: 'groups',    label: 'Fase de Grupos',     short: 'Grupos',  icon: icons.groups },
+  { id: 'r32',       label: '16ª avos',           short: '16ª',     icon: icons.round32 },
+  { id: 'bracket',   label: 'Chaveamento',        short: 'Chave',   icon: icons.bracket },
+  { id: 'settings',  label: 'Configurações',      short: 'Config',  icon: icons.settings },
 ];
 
 // ---------------------------------------------------------------------------
@@ -48,7 +52,7 @@ export function DesktopTabs({ active, onChange }: TabsProps) {
                   isActive ? 'tab-active' : '',
                 ].join(' ')}
               >
-                <span aria-hidden className="text-base">{t.icon}</span>
+                <Icon icon={t.icon} className="text-base" />
                 <span>{t.label}</span>
               </button>
             );
@@ -61,6 +65,7 @@ export function DesktopTabs({ active, onChange }: TabsProps) {
 
 // ---------------------------------------------------------------------------
 // Mobile/tablet: barra inferior fixa (apenas em <lg).
+// 6 itens em grid — fonte e área de toque ajustadas para caber confortável.
 // ---------------------------------------------------------------------------
 
 export function BottomTabBar({ active, onChange }: TabsProps) {
@@ -70,7 +75,7 @@ export function BottomTabBar({ active, onChange }: TabsProps) {
       aria-label="Navegação principal"
       className="
         lg:hidden fixed left-0 right-0 z-40
-        px-3 pointer-events-none
+        px-2 sm:px-3 pointer-events-none
       "
       style={{ bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))' }}
     >
@@ -80,11 +85,11 @@ export function BottomTabBar({ active, onChange }: TabsProps) {
           rounded-[22px] border border-white/55 dark:border-white/10
           bg-white/85 dark:bg-[#060c1a]/85 backdrop-blur-xl
           shadow-[0_18px_44px_-12px_rgba(11,27,58,0.30),0_-2px_18px_-12px_rgba(58,161,255,0.20)]
-          px-1.5 py-1.5
+          px-1 py-1.5
           animate-bottom-nav-in
         "
       >
-        <div className="grid grid-cols-5 gap-0.5">
+        <div className="grid grid-cols-6 gap-0.5">
           {TABS.map((t) => {
             const isActive = active === t.id;
             return (
@@ -95,16 +100,16 @@ export function BottomTabBar({ active, onChange }: TabsProps) {
                 aria-label={t.label}
                 onClick={() => onChange(t.id)}
                 className={[
-                  'flex flex-col items-center justify-center gap-0.5',
-                  'rounded-xl py-1.5 px-1 min-h-[52px]',
-                  'text-[10px] font-semibold tracking-wide',
+                  'flex flex-col items-center justify-center gap-1',
+                  'rounded-xl py-1.5 px-0.5 min-h-[52px]',
+                  'text-[9px] sm:text-[10px] font-semibold tracking-wide',
                   'transition-all active:scale-95',
                   isActive
                     ? 'text-white shadow-glow bg-gradient-to-br from-brand-600 to-brand-400'
                     : 'text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60',
                 ].join(' ')}
               >
-                <span aria-hidden className="text-lg leading-none">{t.icon}</span>
+                <Icon icon={t.icon} className="text-base sm:text-lg leading-none" />
                 <span className="leading-none">{t.short}</span>
               </button>
             );

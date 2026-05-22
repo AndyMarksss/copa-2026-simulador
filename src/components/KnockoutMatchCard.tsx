@@ -3,6 +3,8 @@ import type { KnockoutMatch, Team } from '../types';
 import { ScoreInput } from './ScoreInput';
 import { Badge } from './Badge';
 import { Flag } from './Flag';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 import { needsExtraTime, needsPenalties, getKnockoutWinner } from '../logic/knockout';
 
 // ----------------------------------------------------------------------------
@@ -227,8 +229,9 @@ function StatusBadge({ match, wantsExtra, wantsPens, winner, homeName, awayName,
   if (!match.homeTeamId || !match.awayTeamId) return <Badge variant="pendente" />;
   if (winner) {
     return (
-      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-        ✓ {(isHomeWinner ? homeName : awayName) ?? 'Vencedor definido'}
+      <span className="text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center gap-1">
+        <Icon icon={icons.qualified} />
+        {(isHomeWinner ? homeName : awayName) ?? 'Vencedor definido'}
       </span>
     );
   }

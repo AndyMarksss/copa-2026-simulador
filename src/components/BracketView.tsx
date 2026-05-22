@@ -6,6 +6,8 @@ import { KnockoutMatchCard } from './KnockoutMatchCard';
 import { FinalCard } from './FinalCard';
 import { ThirdPlaceCard } from './ThirdPlaceCard';
 import { MobileTournamentBracket } from './MobileTournamentBracket';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 
 // ----------------------------------------------------------------------------
 // Chaveamento visual a partir das OITAVAS.
@@ -66,7 +68,7 @@ export function BracketView({ state, api }: BracketViewProps) {
         </div>
         {champion && (
           <div className="flex items-center gap-2 text-sm font-display tracking-wider text-yellow-700 dark:text-yellow-300">
-            <span className="animate-trophy text-2xl">🏆</span>
+            <Icon icon={icons.trophy} className="animate-trophy text-2xl text-yellow-500" />
             CAMPEÃO: {champion.name}
           </div>
         )}
@@ -74,8 +76,9 @@ export function BracketView({ state, api }: BracketViewProps) {
 
       {/* Aviso somente no desktop — o mobile mostra um próprio dentro do componente. */}
       {!r32AnyResolved && (
-        <div className="hidden lg:block card card-pad text-sm text-slate-600 dark:text-slate-300">
-          ⏳ As oitavas serão preenchidas automaticamente assim que os jogos dos 16ª avos forem decididos.
+        <div className="hidden lg:flex card card-pad text-sm text-slate-600 dark:text-slate-300 items-start gap-2">
+          <Icon icon={icons.pending} className="text-brand-500 mt-0.5" />
+          <span>As oitavas serão preenchidas automaticamente assim que os jogos dos 16ª avos forem decididos.</span>
         </div>
       )}
 
@@ -91,9 +94,12 @@ export function BracketView({ state, api }: BracketViewProps) {
 
       {/* Aviso de placares invalidados somente no desktop — o mobile já mostra um próprio. */}
       {api.lastInvalidatedKnockoutIds.length > 0 && (
-        <div className="hidden lg:block card card-pad bg-amber-500/10 border-amber-500/30 text-xs text-amber-800 dark:text-amber-200">
-          ⚠️ Alterações invalidaram placares de:{' '}
-          <span className="font-semibold">{api.lastInvalidatedKnockoutIds.join(', ')}</span>
+        <div className="hidden lg:flex card card-pad bg-amber-500/10 border-amber-500/30 text-xs text-amber-800 dark:text-amber-200 items-start gap-2">
+          <Icon icon={icons.warning} className="text-amber-500 mt-0.5" />
+          <span>
+            Alterações invalidaram placares de:{' '}
+            <span className="font-semibold">{api.lastInvalidatedKnockoutIds.join(', ')}</span>
+          </span>
         </div>
       )}
     </section>

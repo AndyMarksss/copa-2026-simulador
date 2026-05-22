@@ -2,6 +2,8 @@ import React from 'react';
 import type { TournamentState } from '../types';
 import { teamById } from '../data/groups';
 import { KnockoutMatchCard } from './KnockoutMatchCard';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 import type { TournamentApi } from '../hooks/useTournament';
 
 // Mapeamento de slot → rótulo legível
@@ -48,9 +50,12 @@ export function RoundOf32({ state, api }: RoundOf32Props) {
       </header>
 
       {!anyTeamsResolved && (
-        <div className="card card-pad text-sm text-slate-600 dark:text-slate-300">
-          ⏳ Preencha primeiro os jogos da fase de grupos. Esta tela libera assim que
-          os 24 classificados diretos e os 8 melhores terceiros forem definidos.
+        <div className="card card-pad text-sm text-slate-600 dark:text-slate-300 flex items-start gap-2">
+          <Icon icon={icons.pending} className="text-brand-500 mt-0.5" />
+          <span>
+            Preencha primeiro os jogos da fase de grupos. Esta tela libera assim que
+            os 24 classificados diretos e os 8 melhores terceiros forem definidos.
+          </span>
         </div>
       )}
 
@@ -83,9 +88,12 @@ export function RoundOf32({ state, api }: RoundOf32Props) {
       </div>
 
       {api.lastInvalidatedKnockoutIds.length > 0 && (
-        <div className="card card-pad bg-amber-500/10 border-amber-500/30 text-xs text-amber-800 dark:text-amber-200">
-          ⚠️ Alterações na fase anterior invalidaram os placares de:{' '}
-          <span className="font-semibold">{api.lastInvalidatedKnockoutIds.join(', ')}</span>
+        <div className="card card-pad bg-amber-500/10 border-amber-500/30 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+          <Icon icon={icons.warning} className="text-amber-500 mt-0.5" />
+          <span>
+            Alterações na fase anterior invalidaram os placares de:{' '}
+            <span className="font-semibold">{api.lastInvalidatedKnockoutIds.join(', ')}</span>
+          </span>
         </div>
       )}
     </section>

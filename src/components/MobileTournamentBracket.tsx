@@ -4,6 +4,8 @@ import type { TournamentApi } from '../hooks/useTournament';
 import { teamById } from '../data/groups';
 import { KnockoutMatchCard } from './KnockoutMatchCard';
 import { Flag } from './Flag';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 import { getKnockoutWinner } from '../logic/knockout';
 
 // ----------------------------------------------------------------------------
@@ -89,8 +91,9 @@ export function MobileTournamentBracket({ state, api }: Props) {
     <div className="lg:hidden space-y-3">
       {/* Aviso (apenas uma vez) */}
       {!anyR32Resolved && (
-        <div className="card card-pad text-sm text-slate-600 dark:text-slate-300">
-          ⏳ As oitavas serão preenchidas automaticamente após a conclusão dos 16ª avos.
+        <div className="card card-pad text-sm text-slate-600 dark:text-slate-300 flex items-start gap-2">
+          <Icon icon={icons.pending} className="text-brand-500 mt-0.5" />
+          <span>As oitavas serão preenchidas automaticamente após a conclusão dos 16ª avos.</span>
         </div>
       )}
 
@@ -138,9 +141,12 @@ export function MobileTournamentBracket({ state, api }: Props) {
       <FourGrid matches={loR16} state={state} api={api} />
 
       {api.lastInvalidatedKnockoutIds.length > 0 && (
-        <div className="card card-pad bg-amber-500/10 border-amber-500/30 text-xs text-amber-800 dark:text-amber-200 mt-4">
-          ⚠️ Alterações invalidaram placares de:{' '}
-          <span className="font-semibold">{api.lastInvalidatedKnockoutIds.join(', ')}</span>
+        <div className="card card-pad bg-amber-500/10 border-amber-500/30 text-xs text-amber-800 dark:text-amber-200 mt-4 flex items-start gap-2">
+          <Icon icon={icons.warning} className="text-amber-500 mt-0.5" />
+          <span>
+            Alterações invalidaram placares de:{' '}
+            <span className="font-semibold">{api.lastInvalidatedKnockoutIds.join(', ')}</span>
+          </span>
         </div>
       )}
     </div>
@@ -333,7 +339,7 @@ function FinalSection({
       "
     >
       <header className="flex items-center justify-center gap-2 mb-2.5">
-        <span className="text-2xl animate-trophy" aria-hidden>🏆</span>
+        <Icon icon={icons.trophy} className="text-2xl text-yellow-500 animate-trophy" />
         <div className="text-center">
           <h3 className="font-display tracking-widest text-xl text-gradient-gold leading-none">
             Grande Final
@@ -342,7 +348,7 @@ function FinalSection({
             {dateLabel}
           </p>
         </div>
-        <span className="text-2xl animate-trophy" aria-hidden>🏆</span>
+        <Icon icon={icons.trophy} className="text-2xl text-yellow-500 animate-trophy" />
       </header>
       <KnockoutMatchCard
         match={match}
@@ -367,7 +373,7 @@ function ThirdPlaceSection({
   return (
     <section className="rounded-2xl p-3 border border-orange-400/35 bg-gradient-to-br from-orange-400/10 via-orange-400/5 to-transparent">
       <header className="flex items-center justify-center gap-2 mb-2">
-        <span className="text-lg" aria-hidden>🥉</span>
+        <Icon icon={icons.thirdPlace} className="text-lg text-orange-500" />
         <h3 className="font-display tracking-wider text-base text-orange-700 dark:text-orange-300">
           Disputa de 3º Lugar
         </h3>
@@ -402,7 +408,7 @@ function ChampionBanner({
         border border-yellow-400/50 shadow-gold animate-glow
       "
     >
-      <div className="text-5xl animate-trophy" aria-hidden>🏆</div>
+      <Icon icon={icons.trophy} className="text-5xl text-yellow-500 animate-trophy" />
       <div className="mt-1 flex flex-col items-center gap-1">
         <Flag team={team as any} size="xl" />
         <div className="font-display tracking-widest text-2xl text-gradient-gold">

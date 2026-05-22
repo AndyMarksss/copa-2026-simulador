@@ -1,5 +1,8 @@
 import React from 'react';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { Standing } from '../types';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 
 type Variant =
   | 'classificado'
@@ -28,9 +31,16 @@ const LABELS: Record<Variant, string> = {
   'em-disputa':     'Em disputa',
   eliminado:        'Eliminado',
   pendente:         'Pendente',
-  campeao:          '🏆 Campeão',
-  vice:             '🥈 Vice',
-  terceiro:         '🥉 3º Lugar',
+  campeao:          'Campeão',
+  vice:             'Vice',
+  terceiro:         '3º Lugar',
+};
+
+// Ícone opcional do badge, renderizado antes do texto.
+const ICONS: Partial<Record<Variant, IconDefinition>> = {
+  campeao:  icons.champion,
+  vice:     icons.award,
+  terceiro: icons.thirdPlace,
 };
 
 interface BadgeProps {
@@ -40,8 +50,10 @@ interface BadgeProps {
 }
 
 export function Badge({ variant, children, className = '' }: BadgeProps) {
+  const icon = ICONS[variant];
   return (
     <span className={`chip ${STYLES[variant]} ${className}`}>
+      {icon && <Icon icon={icon} className="text-[10px]" />}
       {children ?? LABELS[variant]}
     </span>
   );

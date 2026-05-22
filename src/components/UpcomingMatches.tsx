@@ -4,6 +4,8 @@ import { matchIsPlayed } from '../logic/matches';
 import { compareSchedule, formatLongDate } from '../data/schedule';
 import { teamById } from '../data/groups';
 import { Flag } from './Flag';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 import { ROUND_LABELS } from '../data/knockoutBracket';
 
 interface UpcomingMatchesProps {
@@ -57,7 +59,7 @@ export function UpcomingMatches({ state }: UpcomingMatchesProps) {
     <section className="card card-pad">
       <header className="flex items-end justify-between mb-3 flex-wrap gap-2">
         <h3 className="font-display tracking-wider text-xl sm:text-2xl flex items-center gap-2">
-          <span aria-hidden>📅</span> Próximas Partidas
+          <Icon icon={icons.calendar} className="text-brand-500" /> Próximas Partidas
         </h3>
         <span className="text-[11px] text-slate-500">
           {items.length === 0
@@ -67,8 +69,9 @@ export function UpcomingMatches({ state }: UpcomingMatchesProps) {
       </header>
 
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          🎉 Todos os jogos têm placares definidos. Confira o chaveamento final.
+        <p className="text-sm text-slate-500 flex items-center gap-2">
+          <Icon icon={icons.done} className="text-emerald-500" />
+          Todos os jogos têm placares definidos. Confira o chaveamento final.
         </p>
       ) : (
         <div className="space-y-4">
@@ -145,8 +148,9 @@ function UpcomingCard({
         </div>
 
         {item.city && (
-          <div className="text-[10px] text-slate-400">
-            📍 {item.city}
+          <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
+            <Icon icon={icons.location} />
+            {item.city}
           </div>
         )}
       </div>

@@ -6,6 +6,8 @@ import { ROUND_LABELS } from '../data/knockoutBracket';
 import { compareSchedule } from '../data/schedule';
 import { Flag } from './Flag';
 import { Badge } from './Badge';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 
 interface RecentResultsProps {
   state: TournamentState;
@@ -61,7 +63,7 @@ export function RecentResults({ state, limit = 6 }: RecentResultsProps) {
     return (
       <section className="card card-pad">
         <h3 className="font-display tracking-wider text-2xl flex items-center gap-2">
-          <span aria-hidden>📊</span> Últimos resultados
+          <Icon icon={icons.recent} className="text-brand-500" /> Últimos resultados
         </h3>
         <p className="text-sm text-slate-500 mt-2">
           Preencha placares na fase de grupos ou simule uma rodada para começar.
@@ -74,7 +76,7 @@ export function RecentResults({ state, limit = 6 }: RecentResultsProps) {
     <section className="card card-pad">
       <header className="flex items-end justify-between mb-3 flex-wrap gap-2">
         <h3 className="font-display tracking-wider text-2xl flex items-center gap-2">
-          <span aria-hidden>📊</span> Últimos resultados
+          <Icon icon={icons.recent} className="text-brand-500" /> Últimos resultados
         </h3>
       </header>
       <ul className="divide-y divide-slate-200/50 dark:divide-slate-800/50">

@@ -30,8 +30,11 @@ export function WorldCupLogo({ size = 56, className = '' }: WorldCupLogoProps) {
         style={{ height: size, width: 'auto' }}
         className={[
           'object-contain shrink-0',
+          // Tema claro: sombra azul-escura muito leve
           'drop-shadow-[0_2px_8px_rgba(11,27,58,0.20)]',
-          'dark:drop-shadow-[0_0_14px_rgba(212,175,55,0.20)]',
+          // Tema escuro: glow dourado mais forte + halo azul para "descolar"
+          // as áreas pretas do logo do fundo navy.
+          'dark:drop-shadow-[0_0_18px_rgba(245,197,66,0.45)]',
           className,
         ].join(' ')}
       />

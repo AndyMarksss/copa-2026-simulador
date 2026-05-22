@@ -1,7 +1,11 @@
 import React from 'react';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { TournamentApi } from '../hooks/useTournament';
 import { downloadJson, uploadJson } from '../logic/storage';
 import { useToast } from './Toast';
+import { useInstallPWA } from '../hooks/useInstallPWA';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 
 interface SettingsPanelProps {
   api: TournamentApi;
@@ -11,6 +15,16 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps) {
   const toast = useToast();
+  const { canInstall, isInstalled, installApp } = useInstallPWA();
+
+  const onInstallClick = async () => {
+    const outcome = await installApp();
+    if (outcome === 'accepted') {
+      toast.show({ variant: 'success', title: 'Aplicativo instalado!', description: 'O simulador foi adicionado à sua tela inicial.' });
+    } else if (outcome === 'dismissed') {
+      toast.show({ variant: 'info', title: 'Instalação cancelada', description: 'Você pode instalar mais tarde a qualquer momento.' });
+    }
+  };
 
   const confirmAnd = (msg: string, fn: () => void) => () => {
     if (window.confirm(msg)) fn();
@@ -55,12 +69,10 @@ export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps)
         </p>
       </header>
 
-      {/* ---------------------------------------------------------------
-          1. COMO USAR — primeiro, para orientar quem chega na página
-         --------------------------------------------------------------- */}
+      {/* 1. COMO USAR */}
       <section className="card card-pad bg-gradient-to-br from-brand-500/10 via-transparent to-brand-500/5 border-brand-500/25">
         <header className="flex items-center gap-2 mb-3">
-          <span aria-hidden className="text-2xl">🗺️</span>
+          <Icon icon={icons.howToUse} className="text-2xl text-brand-500" />
           <div>
             <h3 className="font-display tracking-wider text-xl">Como usar</h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -88,30 +100,74 @@ export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps)
         </ol>
       </section>
 
-      {/* ---------------------------------------------------------------
-          2. SIMULAÇÕES RÁPIDAS
-         --------------------------------------------------------------- */}
-      <Card title="Simulações rápidas" icon="⚡">
+      {/* 2. INSTALAR APLICATIVO (PWA) */}
+      <Card title="Instalar aplicativo" icon={icons.install}>
+        {isInstalled ? (
+          <div className="flex items-start gap-2 text-sm text-emerald-700 dark:text-emerald-300">
+            <Icon icon={icons.qualified} className="text-emerald-500 mt-0.5" />
+            <div>
+              <div className="font-semibold">Aplicativo já instalado</div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Você está usando o simulador como app instalado — bom proveito!
+              </p>
+            </div>
+          </div>
+        ) : canInstall ? (
+          <>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Instale o simulador no seu celular ou desktop para abrir como aplicativo, com ícone próprio e funcionamento offline.
+            </p>
+            <button className="btn-primary w-full sm:w-auto" onClick={onInstallClick}>
+              <Icon icon={icons.mobile} />
+              Instalar no dispositivo
+            </button>
+          </>
+        ) : (
+          <div className="flex items-start gap-2 text-sm">
+            <Icon icon={icons.info} className="text-brand-500 mt-0.5" />
+            <div>
+              <div className="font-semibold">Instalação via navegador</div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                No iPhone, abra no Safari e toque em <strong>Compartilhar → Adicionar à Tela de Início</strong>.
+                No Android, use <strong>Chrome → menu ⋮ → Instalar aplicativo</strong>.
+              </p>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* 3. SIMULAÇÕES RÁPIDAS */}
+      <Card title="Simulações rápidas" icon={icons.simulation}>
         <p className="text-[11px] text-slate-500">
           Geram placares plausíveis baseados no ranking FIFA. Resultados manuais nunca são sobrescritos.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          <button className="btn-primary" onClick={() => simReport('fase de grupos')(api.simulateGroups())}>⚽ Simular fase de grupos</button>
-          <button className="btn-soft"    onClick={() => simReport('16ª avos')(api.simulateRound('R32'))}>🎯 Simular 16ª avos</button>
-          <button className="btn-soft"    onClick={() => simReport('oitavas')(api.simulateRound('R16'))}>🥊 Simular oitavas</button>
-          <button className="btn-soft"    onClick={() => simReport('quartas')(api.simulateRound('QF'))}>🔥 Simular quartas</button>
-          <button className="btn-soft"    onClick={() => simReport('semis + 3º + final')(api.simulateRound('SF') + api.simulateRound('3P') + api.simulateRound('F'))}>🏅 Simular semis + final</button>
-          <button className="btn-gold"    onClick={() => simReport('mata-mata completo')(api.simulateAllKnockout())}>🏆 Simular mata-mata completo</button>
+          <button className="btn-primary" onClick={() => simReport('fase de grupos')(api.simulateGroups())}>
+            <Icon icon={icons.simulateGroups} /> Simular fase de grupos
+          </button>
+          <button className="btn-soft" onClick={() => simReport('16ª avos')(api.simulateRound('R32'))}>
+            <Icon icon={icons.simulateR32} /> Simular 16ª avos
+          </button>
+          <button className="btn-soft" onClick={() => simReport('oitavas')(api.simulateRound('R16'))}>
+            <Icon icon={icons.simulateR16} /> Simular oitavas
+          </button>
+          <button className="btn-soft" onClick={() => simReport('quartas')(api.simulateRound('QF'))}>
+            <Icon icon={icons.simulateQF} /> Simular quartas
+          </button>
+          <button className="btn-soft" onClick={() => simReport('semis + 3º + final')(api.simulateRound('SF') + api.simulateRound('3P') + api.simulateRound('F'))}>
+            <Icon icon={icons.simulateSemiFinal} /> Simular semis + final
+          </button>
+          <button className="btn-gold" onClick={() => simReport('mata-mata completo')(api.simulateAllKnockout())}>
+            <Icon icon={icons.simulateAll} /> Simular mata-mata completo
+          </button>
         </div>
         <button className="btn-ghost w-full mt-1" onClick={onClearSimulated}>
-          🧽 Limpar apenas simulações (preserva manuais)
+          <Icon icon={icons.clean} /> Limpar apenas simulações (preserva manuais)
         </button>
       </Card>
 
-      {/* ---------------------------------------------------------------
-          3. IMPORTAR / EXPORTAR
-         --------------------------------------------------------------- */}
-      <Card title="Importar / Exportar dados" icon="💾">
+      {/* 3. IMPORTAR / EXPORTAR */}
+      <Card title="Importar / Exportar dados" icon={icons.export}>
         <div className="flex items-center justify-between text-sm">
           <span>Salvamento automático</span>
           <label className="relative inline-flex items-center cursor-pointer">
@@ -128,15 +184,17 @@ export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps)
           Quando ativo, o estado é gravado no <code>localStorage</code> a cada alteração.
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
-          <button className="btn-soft" onClick={onExport}>⬇️ Exportar JSON</button>
-          <button className="btn-soft" onClick={onImport}>⬆️ Importar JSON</button>
+          <button className="btn-soft" onClick={onExport}>
+            <Icon icon={icons.export} /> Exportar JSON
+          </button>
+          <button className="btn-soft" onClick={onImport}>
+            <Icon icon={icons.import} /> Importar JSON
+          </button>
         </div>
       </Card>
 
-      {/* ---------------------------------------------------------------
-          4. LIMPEZA DE FASES
-         --------------------------------------------------------------- */}
-      <Card title="Limpeza de fases" icon="🧹">
+      {/* 4. LIMPEZA DE FASES */}
+      <Card title="Limpeza de fases" icon={icons.clean}>
         <p className="text-[11px] text-slate-500">
           Reinicia placares de uma fase específica, mantendo as demais intactas.
         </p>
@@ -145,21 +203,19 @@ export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps)
             className="btn-ghost"
             onClick={confirmAnd('Limpar TODOS os placares da fase de grupos?', api.clearGroups)}
           >
-            🧹 Limpar fase de grupos
+            <Icon icon={icons.clean} /> Limpar fase de grupos
           </button>
           <button
             className="btn-ghost"
             onClick={confirmAnd('Limpar TODOS os placares do mata-mata?', api.clearKnockout)}
           >
-            🧹 Limpar mata-mata
+            <Icon icon={icons.clean} /> Limpar mata-mata
           </button>
         </div>
       </Card>
 
-      {/* ---------------------------------------------------------------
-          5. RESETAR TORNEIO
-         --------------------------------------------------------------- */}
-      <Card title="Resetar torneio" icon="♻️">
+      {/* 5. RESETAR TORNEIO */}
+      <Card title="Resetar torneio" icon={icons.reset}>
         <p className="text-[11px] text-slate-500">
           Apaga todos os placares e volta o simulador ao estado inicial. Esta ação não pode ser desfeita.
         </p>
@@ -167,18 +223,17 @@ export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps)
           className="btn-danger w-full"
           onClick={confirmAnd('Resetar todo o torneio? Esta ação não pode ser desfeita.', api.resetAll)}
         >
-          ♻️ Resetar torneio inteiro
+          <Icon icon={icons.reset} /> Resetar torneio inteiro
         </button>
       </Card>
 
-      {/* ---------------------------------------------------------------
-          6. PREFERÊNCIAS
-         --------------------------------------------------------------- */}
-      <Card title="Preferências" icon="🎨">
+      {/* 6. PREFERÊNCIAS */}
+      <Card title="Preferências" icon={icons.theme}>
         <div className="flex items-center justify-between text-sm">
           <span>Tema visual</span>
           <button className="btn-ghost" onClick={onToggleTheme}>
-            {theme === 'dark' ? '☀️ Claro' : '🌙 Escuro'}
+            <Icon icon={theme === 'dark' ? icons.light : icons.dark} />
+            {theme === 'dark' ? 'Claro' : 'Escuro'}
           </button>
         </div>
         <p className="text-[11px] text-slate-500">
@@ -201,11 +256,12 @@ export function SettingsPanel({ api, theme, onToggleTheme }: SettingsPanelProps)
 // Sub-componentes
 // ----------------------------------------------------------------------------
 
-function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function Card({ title, icon, children }: { title: string; icon: IconDefinition; children: React.ReactNode }) {
   return (
     <div className="card card-pad flex flex-col gap-2">
       <h3 className="font-display tracking-wider text-lg flex items-center gap-2">
-        <span aria-hidden>{icon}</span>{title}
+        <Icon icon={icon} className="text-brand-500" />
+        {title}
       </h3>
       {children}
     </div>

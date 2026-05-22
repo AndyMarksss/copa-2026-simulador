@@ -2,6 +2,8 @@ import React from 'react';
 import type { KnockoutMatch, Team } from '../types';
 import { KnockoutMatchCard } from './KnockoutMatchCard';
 import { Flag } from './Flag';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 import { getKnockoutWinner } from '../logic/knockout';
 
 interface FinalCardProps {
@@ -32,7 +34,7 @@ export function FinalCard({
                      bg-gradient-to-br from-yellow-400/20 via-amber-400/15 to-orange-400/10
                      border border-yellow-400/40 animate-glow"
         >
-          <div className="text-2xl animate-trophy">🏆</div>
+          <Icon icon={icons.trophy} className="text-2xl text-yellow-500 animate-trophy" />
           <div className="mt-0.5 flex flex-col items-center gap-0.5">
             <Flag team={championTeam} size="lg" />
             <div className="font-display tracking-widest text-base sm:text-lg text-gradient-gold truncate w-full">

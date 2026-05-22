@@ -5,6 +5,8 @@ import { detectUnresolvedTies } from '../logic/tiebreakers';
 import { matchIsPlayed } from '../logic/matches';
 import { teamById } from '../data/groups';
 import { Flag } from './Flag';
+import { Icon } from './Icon';
+import { icons } from '../utils/icons';
 import { ScoreInput } from './ScoreInput';
 
 interface GroupCardProps {
@@ -135,7 +137,8 @@ export function GroupCard({
       {/* Aviso de empate manual */}
       {ties.length > 0 && (
         <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
-          ⚠️ Empate sem critério decisivo entre&nbsp;
+          <Icon icon={icons.warning} className="text-amber-500 mr-1" />
+          Empate sem critério decisivo entre&nbsp;
           {ties.map((tiedTeams, i) => (
             <span key={i} className="font-semibold">
               {tiedTeams.map((id) => teamById([group], id)?.code ?? id).join(' / ')}
@@ -280,7 +283,7 @@ function ProgressBadge({
   if (complete) {
     return (
       <span className="chip bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30">
-        ✓ Completo
+        <Icon icon={icons.qualified} /> Completo
       </span>
     );
   }
