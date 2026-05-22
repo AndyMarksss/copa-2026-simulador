@@ -18,20 +18,10 @@ export function Header({ theme, onToggleTheme }: HeaderProps) {
       <div className="mx-auto max-w-[1500px] px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
           {/*
-            Container "moldura" — fica praticamente invisível no tema claro
-            mas no tema escuro adiciona um fundo translúcido + glow azul/dourado
-            para destacar as áreas escuras da logo oficial da Copa 2026.
+            Logo limpo — sem moldura/borda. A visibilidade no modo escuro vem
+            do drop-shadow dourado aplicado dentro do próprio WorldCupLogo.
           */}
-          <span
-            className="
-              shrink-0 inline-flex items-center justify-center
-              rounded-xl
-              dark:bg-white/[0.06] dark:ring-1 dark:ring-white/15 dark:backdrop-blur-md
-              dark:px-1.5 dark:py-0.5
-              dark:shadow-[0_0_22px_rgba(58,161,255,0.18),0_0_18px_rgba(212,175,55,0.10)]
-              transition-all
-            "
-          >
+          <span className="shrink-0 inline-flex items-center justify-center">
             <span className="sm:hidden">
               <WorldCupLogo size={42} />
             </span>

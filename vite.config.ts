@@ -18,7 +18,13 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       // Arquivos extra a colocar no precache (além dos gerados pelo Vite).
-      includeAssets: ['Logo_copa_2026.png', 'favicon.ico'],
+      includeAssets: [
+        'Logo_copa_2026.png',
+        'pwa-192x192.png',
+        'pwa-512x512.png',
+        'apple-touch-icon.png',
+        'maskable-icon-512x512.png',
+      ],
       manifest: {
         name:        'Simulador Copa do Mundo 2026',
         short_name:  'Copa 2026',
@@ -28,10 +34,13 @@ export default defineConfig({
         background_color: '#060c1a',  // wc-night
         display:     'standalone',
         orientation: 'portrait-primary',
+        // Os ícones abaixo são gerados por `npm run generate-icons`:
+        // canvas QUADRADO com a logo centralizada e padding interno,
+        // evitando o stretch ao instalar como app.
         icons: [
-          { src: 'Logo_copa_2026.png', sizes: '192x192', type: 'image/png' },
-          { src: 'Logo_copa_2026.png', sizes: '512x512', type: 'image/png' },
-          { src: 'Logo_copa_2026.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'pwa-192x192.png',           sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512x512.png',           sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

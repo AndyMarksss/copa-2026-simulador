@@ -317,18 +317,19 @@ function HeroSection({
           Preencha resultados, acompanhe classificados e simule o mata-mata em tempo real.
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button className="btn-primary" onClick={() => onNavigate('groups')}>
+        {/* Grid 2x2 — em telas muito pequenas (<400px) cai para 1 coluna */}
+        <div className="mt-3 grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 sm:gap-3 sm:max-w-md">
+          <button className="btn-primary w-full" onClick={() => onNavigate('groups')}>
             <Icon icon={icons.groups} /> Ver grupos
           </button>
-          <button className="btn-soft" onClick={() => onNavigate('matches')}>
+          <button className="btn-soft w-full" onClick={() => onNavigate('matches')}>
             <Icon icon={icons.matches} /> Ver jogos
           </button>
-          <button className="btn-soft" onClick={onSimulateGroups}>
+          <button className="btn-soft w-full" onClick={onSimulateGroups}>
             <Icon icon={icons.simulation} /> Simular grupos
           </button>
-          <button className="btn-gold" onClick={() => onNavigate('bracket')}>
-            <Icon icon={icons.bracket} /> Ir para chaveamento
+          <button className="btn-gold w-full" onClick={() => onNavigate('bracket')}>
+            <Icon icon={icons.bracket} /> Ver chaveamento
           </button>
         </div>
       </div>
