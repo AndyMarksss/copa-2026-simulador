@@ -51,6 +51,10 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          # Habilita o GitHub Pages automaticamente caso o repositório
+          # ainda não tenha esse recurso ativado (evita "Get Pages site failed").
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
