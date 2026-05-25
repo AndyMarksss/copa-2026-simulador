@@ -3,7 +3,7 @@
 // Incrementar manualmente conforme grandes mudanças (semver).
 // ---------------------------------------------------------------------------
 
-export const APP_VERSION = '1.6.0';
+export const APP_VERSION = '1.7.0';
 export const APP_VERSION_LABEL = `v${APP_VERSION}`;
 export const APP_LAST_UPDATED = '2026-05-22';
 
