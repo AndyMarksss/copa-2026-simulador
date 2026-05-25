@@ -3,9 +3,9 @@
 // Incrementar manualmente conforme grandes mudanças (semver).
 // ---------------------------------------------------------------------------
 
-export const APP_VERSION = '1.7.0';
+export const APP_VERSION = '1.8.2';
 export const APP_VERSION_LABEL = `v${APP_VERSION}`;
-export const APP_LAST_UPDATED = '2026-05-22';
+export const APP_LAST_UPDATED = '2026-05-25';
 
 /** Data formatada em pt-BR para exibição no rodapé. */
 export function formatLastUpdated(iso = APP_LAST_UPDATED): string {

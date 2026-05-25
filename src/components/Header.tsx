@@ -18,17 +18,12 @@ export function Header({ theme, onToggleTheme }: HeaderProps) {
       <div className="mx-auto max-w-[1500px] px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
           {/*
-            Logo limpo — sem moldura/borda. A visibilidade no modo escuro vem
-            do drop-shadow dourado aplicado dentro do próprio WorldCupLogo.
+            Logo theme-aware — a troca de imagem por tema acontece dentro do
+            próprio WorldCupLogo via MutationObserver no <html>. O shell
+            responsivo (w-12 → sm:w-14 → lg:w-16) garante tamanho consistente
+            entre temas, sem moldura nem layout shift.
           */}
-          <span className="shrink-0 inline-flex items-center justify-center">
-            <span className="sm:hidden">
-              <WorldCupLogo size={42} />
-            </span>
-            <span className="hidden sm:inline">
-              <WorldCupLogo size={56} />
-            </span>
-          </span>
+          <WorldCupLogo />
 
           <div className="min-w-0">
             <h1 className="font-display tracking-wider text-lg sm:text-2xl leading-none truncate">

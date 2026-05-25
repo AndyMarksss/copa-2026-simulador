@@ -1,13 +1,13 @@
 {
   "name": "copa-2026-simulador",
   "private": true,
-  "version": "1.7.0",
+  "version": "1.8.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "generate-icons": "node scripts/generate-pwa-icons.mjs"
+    "generate-icons": "node scripts/generate-logo-assets.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",

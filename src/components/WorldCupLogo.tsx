@@ -1,58 +1,115 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-// ----------------------------------------------------------------------------
-// Logo principal do simulador.
+// ---------------------------------------------------------------------------
+// Logo principal do simulador — versão theme-aware.
 //
-// Usa o arquivo `Logo_copa_2026.png` colocado em /public.
-// Em caso de erro (404 etc.), cai no emblema "26" SVG como fallback.
-// ----------------------------------------------------------------------------
+//   • Tema CLARO  → /Logo_copa_2026-header-light.png  ("26" escuro)
+//   • Tema ESCURO → /Logo_copa_2026-header-dark.png   ("26" branco)
+//
+//   Ambas as imagens são geradas por `npm run generate-icons` com canvas
+//   idêntico (640×640) e mesma área útil — então têm a MESMA presença visual
+//   no header, sem salto ao alternar tema.
+//
+//   O componente OBSERVA a classe `.dark` do <html> via MutationObserver,
+//   então funciona com qualquer mecanismo de tema (hook, contexto, manual)
+//   sem precisar receber props.
+// ---------------------------------------------------------------------------
 
 interface WorldCupLogoProps {
-  /** Altura desejada em px (largura é proporcional). */
+  /** Se informado, sobrescreve o tamanho responsivo padrão (em px). */
   size?: number;
   className?: string;
 }
 
-// Usa BASE_URL do Vite para que o caminho continue válido quando o site
-// for servido sob um subdiretório (ex.: GitHub Pages em /repo-name/).
-const LOGO_SRC = `${import.meta.env.BASE_URL}Logo_copa_2026.png`;
+const BASE = import.meta.env.BASE_URL;
+// Versões NORMALIZADAS para o header — ambas têm o mesmo canvas (640×640)
+// com a logo centralizada e mesma proporção de padding, garantindo tamanho
+// visual idêntico ao alternar tema. Geradas por `npm run generate-icons`.
+const LIGHT_SRC = `${BASE}Logo_copa_2026-header-light.png`;
+const DARK_SRC  = `${BASE}Logo_copa_2026-header-dark.png`;
 
-export function WorldCupLogo({ size = 56, className = '' }: WorldCupLogoProps) {
-  const [failed, setFailed] = useState(false);
+/** Observa a classe `dark` no <html> e retorna `true` se o tema escuro estiver ativo. */
+function useIsDarkTheme(): boolean {
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('dark');
+  });
 
-  if (!failed) {
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const obs = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+
+  return isDark;
+}
+
+export function WorldCupLogo({ size, className = '' }: WorldCupLogoProps) {
+  const isDark = useIsDarkTheme();
+  const [failedLight, setFailedLight] = useState(false);
+  const [failedDark, setFailedDark] = useState(false);
+
+  const src = isDark ? DARK_SRC : LIGHT_SRC;
+  const failed = isDark ? failedDark : failedLight;
+
+  // ---------- Shell responsivo padronizado ----------
+  // Se size for passado, fica fixo; caso contrário usa tamanhos responsivos.
+  const fixedStyle: React.CSSProperties | undefined =
+    size !== undefined ? { width: size, height: size } : undefined;
+  const responsiveClasses =
+    size === undefined ? 'w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16' : '';
+
+  if (failed) {
     return (
-      <img
-        src={LOGO_SRC}
-        alt="Copa do Mundo FIFA 2026"
-        onError={() => setFailed(true)}
-        draggable={false}
-        style={{ height: size, width: 'auto' }}
+      <span
         className={[
-          'object-contain shrink-0',
-          // Tema claro: sombra azul-escura muito leve
-          'drop-shadow-[0_2px_8px_rgba(11,27,58,0.20)]',
-          // Tema escuro: glow dourado mais forte + halo azul para "descolar"
-          // as áreas pretas do logo do fundo navy.
-          'dark:drop-shadow-[0_0_18px_rgba(245,197,66,0.45)]',
+          'logo-shell relative inline-flex items-center justify-center shrink-0',
+          responsiveClasses,
           className,
         ].join(' ')}
-      />
+        style={fixedStyle}
+      >
+        <DefaultEmblem />
+      </span>
     );
   }
 
-  // Fallback: emblema vetorial estilizado "26" (apenas se a imagem falhar).
   return (
     <span
-      aria-label="Copa do Mundo 2026"
-      role="img"
-      className={`inline-block shrink-0 ${className}`}
-      style={{ width: size, height: size }}
+      className={[
+        'logo-shell relative inline-flex items-center justify-center shrink-0',
+        responsiveClasses,
+        className,
+      ].join(' ')}
+      style={fixedStyle}
     >
-      <DefaultEmblem />
+      <img
+        key={src}              // remonta ao trocar tema → dispara fade
+        src={src}
+        alt="Copa do Mundo FIFA 2026"
+        onError={() => (isDark ? setFailedDark(true) : setFailedLight(true))}
+        draggable={false}
+        className={[
+          'logo-img w-full h-full object-contain',
+          'transition-opacity duration-300',
+          // Como ambas as logos já são geradas com canvas idêntico e mesma
+          // área útil, NÃO precisamos de escala diferente por tema — a única
+          // diferença é a sombra/glow.
+          isDark
+            ? 'drop-shadow-[0_0_14px_rgba(245,197,66,0.35)]'
+            : 'drop-shadow-[0_4px_12px_rgba(15,23,42,0.18)]',
+        ].join(' ')}
+      />
     </span>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Fallback inline (emblema "26") quando nenhuma das imagens carregar.
+// ---------------------------------------------------------------------------
 
 function DefaultEmblem() {
   return (
