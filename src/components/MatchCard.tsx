@@ -8,6 +8,7 @@ import { Icon } from './Icon';
 import { icons } from '../utils/icons';
 import { ScoreInput } from './ScoreInput';
 import { ROUND_LABELS } from '../data/knockoutBracket';
+import { formatLongDate } from '../data/schedule';
 import type { AnyMatch, MatchStatus } from '../logic/matchStatus';
 
 // ---------------------------------------------------------------------------
@@ -100,7 +101,7 @@ export function MatchCard(props: MatchCardProps) {
           isHighlighted ? 'match-highlight' : '',
         ].join(' ')}
       >
-        <CardHeader stage={stage} time={time} status={status} source={source} compact />
+        <CardHeader stage={stage} time={time} date={match.date} status={status} source={source} compact showDate />
         <div className="flex items-center gap-2 text-sm min-w-0">
           <TeamLine team={home} align="left" winner={homeIsWinner} compact />
           <ScoreCenter
@@ -198,10 +199,8 @@ function FullMatchCard({
         : { label: 'Ver no chaveamento', tab: 'bracket' as TabId })
     : { label: 'Ver no grupo', tab: 'groups' as TabId };
 
-  // Apenas times de grupo abrem o histórico via clique no nome.
-  // Para mata-mata, o clique simplesmente não faz nada — não há grupo único associado.
-  const isGroupMatch = !isKO;
-
+  // O clique no nome da seleção abre o histórico/trajetória — vale para
+  // jogos de grupo E mata-mata (qualquer time tem trajetória completa).
   return (
     <article
       data-match-id={(match as { id: string }).id}
@@ -216,7 +215,7 @@ function FullMatchCard({
       <div className="flex items-center gap-2 text-sm min-w-0">
         <TeamLine
           team={home} align="left" winner={homeIsWinner}
-          onClick={isGroupMatch && homeId ? () => onTeamClick(homeId) : undefined}
+          onClick={homeId ? () => onTeamClick(homeId) : undefined}
         />
         <ScoreCenter
           finished={status.isFinished}
@@ -225,12 +224,16 @@ function FullMatchCard({
         />
         <TeamLine
           team={away} align="right" winner={awayIsWinner}
-          onClick={isGroupMatch && awayId ? () => onTeamClick(awayId) : undefined}
+          onClick={awayId ? () => onTeamClick(awayId) : undefined}
         />
       </div>
 
       {editing && editable && (
-        <ScoreEditor item={item} api={api} onDone={() => setEditing(false)} />
+        <ScoreEditor
+          item={item} api={api}
+          homeCode={home?.code} awayCode={away?.code}
+          onDone={() => setEditing(false)}
+        />
       )}
 
       <footer className="flex items-center justify-between text-[10px] text-slate-500 gap-2 min-w-0 flex-wrap">
@@ -276,14 +279,18 @@ function FullMatchCard({
 // ---------------------------------------------------------------------------
 
 function CardHeader({
-  stage, time, status, source, compact,
+  stage, time, date, status, source, compact, showDate,
 }: {
   stage: string;
   time: string;
+  date?: string;
   status: MatchStatus;
   source?: 'manual' | 'simulated';
   compact?: boolean;
+  /** Se true, mostra a data formatada antes do horário. Padrão: false. */
+  showDate?: boolean;
 }) {
+  const dayLabel = showDate && date ? formatLongDate(date) : null;
   return (
     <header className="flex items-start justify-between gap-2 min-w-0">
       <div className="flex flex-col min-w-0">
@@ -295,7 +302,14 @@ function CardHeader({
         >
           {stage}
         </span>
-        <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+        <span className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
+          {dayLabel && (
+            <>
+              <Icon icon={icons.calendar} className="text-slate-400" />
+              <span>{dayLabel}</span>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
+            </>
+          )}
           <Icon icon={icons.clock} className="text-slate-400" />
           <span className="font-mono">{time}</span>
         </span>
@@ -423,11 +437,13 @@ function StatusBadge({
 // ---------------------------------------------------------------------------
 
 function ScoreEditor({
-  item, api, onDone,
+  item, api, onDone, homeCode, awayCode,
 }: {
   item: MatchItem;
   api: TournamentApi;
   onDone: () => void;
+  homeCode?: string;
+  awayCode?: string;
 }) {
   const { match, type } = item;
   const isKO = type === 'knockout';
@@ -488,6 +504,10 @@ function ScoreEditor({
     tied &&
     m.homeExtra !== null && m.awayExtra !== null &&
     (m.homeScore ?? 0) + m.homeExtra === (m.awayScore ?? 0) + m.awayExtra;
+
+  // Home/away cached para usar nos botões de decisão manual
+  const homeT = m.homeTeamId;
+  const awayT = m.awayTeamId;
 
   return (
     <div className="rounded-lg bg-slate-100/70 dark:bg-slate-800/40 px-2 py-2 flex flex-col gap-2">
@@ -567,6 +587,47 @@ function ScoreEditor({
               size="md"
               tone="rose"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Decisão manual de vencedor (necessária quando os pênaltis também empatam
+          ou quando o usuário quer sobrescrever a decisão automática). */}
+      {(tied || tiedAfterExtra) && homeT && awayT && (
+        <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+            Definir vencedor manualmente
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => api.setManualWinner(m.id, homeT)}
+              className={[
+                'btn-soft !py-1 !px-2 text-[11px]',
+                m.manualWinnerTeamId === homeT ? 'ring-2 ring-brand-500' : '',
+              ].join(' ')}
+            >
+              {homeCode ?? 'Mandante'}
+            </button>
+            <button
+              type="button"
+              onClick={() => api.setManualWinner(m.id, awayT)}
+              className={[
+                'btn-soft !py-1 !px-2 text-[11px]',
+                m.manualWinnerTeamId === awayT ? 'ring-2 ring-brand-500' : '',
+              ].join(' ')}
+            >
+              {awayCode ?? 'Visitante'}
+            </button>
+            {m.manualWinnerTeamId && (
+              <button
+                type="button"
+                onClick={() => api.setManualWinner(m.id, null)}
+                className="btn-ghost !py-1 !px-2 text-[11px]"
+              >
+                limpar
+              </button>
+            )}
           </div>
         </div>
       )}

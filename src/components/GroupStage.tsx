@@ -1,25 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { GroupId } from '../types';
 import type { TournamentApi } from '../hooks/useTournament';
 import { GroupCard } from './GroupCard';
 import { ThirdPlacedRanking } from './ThirdPlacedRanking';
-import { TeamDetailsModal } from './TeamDetailsModal';
+import { useOpenTeamDetails } from './TeamDetailsContext';
 
 interface GroupStageProps {
   api: TournamentApi;
-  /** Quando informado, expande o card, rola até ele e aplica animação. */
   highlightedGroupId?: GroupId | null;
-  /** Combinado com highlightedGroupId, destaca a linha da seleção. */
   highlightedTeamId?: string | null;
-  /** Chamado após a animação terminar. */
   onClearHighlight?: () => void;
 }
 
 export function GroupStage({
   api, highlightedGroupId, highlightedTeamId, onClearHighlight,
 }: GroupStageProps) {
-  // Modal de trajetória da seleção — aberto ao clicar em uma linha da tabela.
-  const [openTeamId, setOpenTeamId] = useState<string | null>(null);
+  const openTeam = useOpenTeamDetails();
 
   // Refs para cada GroupCard — usadas para rolar até o grupo destacado.
   const groupRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -30,7 +26,6 @@ export function GroupStage({
       const el = groupRefs.current[highlightedGroupId];
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 80);
-    // A animação .group-highlight dura ~3s; .team-row-highlight ~2.4s.
     const t2 = window.setTimeout(() => onClearHighlight?.(), 3200);
     return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
   }, [highlightedGroupId, highlightedTeamId, onClearHighlight]);
@@ -59,7 +54,7 @@ export function GroupStage({
               onSetScore={api.setGroupMatchScore}
               onManualOrder={api.setManualTiebreak}
               defaultExpanded={idx === 0}
-              onTeamClick={setOpenTeamId}
+              onTeamClick={openTeam}
               highlightedTeamId={isHighlighted ? highlightedTeamId ?? null : null}
               forceExpanded={isHighlighted || undefined}
               highlighted={isHighlighted}
@@ -69,12 +64,6 @@ export function GroupStage({
       </div>
 
       <ThirdPlacedRanking state={api.state} />
-
-      <TeamDetailsModal
-        state={api.state}
-        teamId={openTeamId}
-        onClose={() => setOpenTeamId(null)}
-      />
     </section>
   );
 }

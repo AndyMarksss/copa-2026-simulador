@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import type { KnockoutMatch, Team, TournamentState } from '../types';
+import type { GroupId, KnockoutMatch, Team, TournamentState } from '../types';
 import { teamById } from '../data/groups';
 import { computeGroupStandings } from '../logic/standings';
 import { computeThirdPlacedRanking } from '../logic/thirdPlaced';
@@ -26,6 +26,13 @@ interface TeamDetailsModalProps {
   state: TournamentState;
   teamId: string | null;
   onClose: () => void;
+  /**
+   * Chamado quando o usuário clica em "Grupo X" no cabeçalho da seleção.
+   * Recebe o id do grupo e o id da seleção (para destaque visual). O handler
+   * é responsável por navegar para a aba Grupos, fechar o modal e aplicar a
+   * animação de destaque.
+   */
+  onNavigateToGroup?: (groupId: GroupId, teamId: string) => void;
 }
 
 interface PlayedGame {
@@ -60,7 +67,7 @@ interface KnockoutAppearance {
   scoreLine?: string;
 }
 
-export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalProps) {
+export function TeamDetailsModal({ state, teamId, onClose, onNavigateToGroup }: TeamDetailsModalProps) {
   // ESC + scroll lock
   useEffect(() => {
     if (!teamId) return;
@@ -222,8 +229,28 @@ export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalPro
               <h3 id="team-modal-title" className="font-display tracking-wider text-2xl leading-tight truncate">
                 {team.name}
               </h3>
-              <div className="text-[12px] text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
-                <span>Grupo {team.groupId}</span>
+              <div className="text-[12px] text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap mt-0.5">
+                {onNavigateToGroup ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToGroup(team.groupId, team.id)}
+                    title={`Ver Grupo ${team.groupId} na aba Grupos`}
+                    className="
+                      inline-flex items-center gap-1
+                      rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5
+                      font-semibold text-brand-700 dark:text-brand-300
+                      hover:bg-brand-500/15
+                      focus:outline-none focus:ring-2 focus:ring-brand-400/40
+                      underline decoration-dotted underline-offset-2
+                      transition-colors
+                    "
+                  >
+                    Grupo {team.groupId}
+                    <Icon icon={icons.chevronRight} className="text-[9px]" />
+                  </button>
+                ) : (
+                  <span>Grupo {team.groupId}</span>
+                )}
                 <span className="text-slate-300 dark:text-slate-600">·</span>
                 <span className="font-mono">FIFA {team.fifaRank}</span>
               </div>
@@ -236,21 +263,7 @@ export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalPro
           {myStanding && (
             <section>
               <SectionTitle icon={icons.groups} title="No grupo" />
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                <StatBox label="Pos" value={`${myStanding.position}º`} highlight />
-                <StatBox label="Pts" value={String(myStanding.points)} highlight />
-                <StatBox label="J"   value={String(myStanding.played)} />
-                <StatBox label="V"   value={String(myStanding.wins)}   tone="emerald" />
-                <StatBox label="E"   value={String(myStanding.draws)}  tone="slate" />
-                <StatBox label="D"   value={String(myStanding.losses)} tone="rose" />
-                <StatBox label="GP"  value={String(myStanding.goalsFor)} />
-                <StatBox label="GC"  value={String(myStanding.goalsAgainst)} />
-                <StatBox
-                  label="SG"
-                  value={`${myStanding.goalDifference > 0 ? '+' : ''}${myStanding.goalDifference}`}
-                  tone={myStanding.goalDifference > 0 ? 'emerald' : myStanding.goalDifference < 0 ? 'rose' : 'slate'}
-                />
-              </div>
+              <TeamStandingMiniTable standing={myStanding} />
               {trajectory.status && (
                 <div className={[
                   'mt-3 rounded-lg px-3 py-2 text-sm flex items-start gap-2',
@@ -473,31 +486,77 @@ function SectionTitle({ icon, title }: { icon: typeof icons.info; title: string 
   );
 }
 
-function StatBox({
-  label, value, tone = 'slate', highlight,
+/**
+ * Mini-tabela compacta com 9 colunas (Pos · Pts · J · V · E · D · GP · GC · SG).
+ * Cabe no mobile sem scroll horizontal usando padding apertado e fonte menor.
+ * Pos e Pts ficam em destaque (gradiente azul); V/D coloridos; SG ganha cor
+ * conforme o saldo (positivo verde, negativo vermelho, zero neutro).
+ */
+function TeamStandingMiniTable({
+  standing,
 }: {
-  label: string;
-  value: string;
-  tone?: 'slate' | 'emerald' | 'rose';
-  highlight?: boolean;
+  standing: {
+    position: number; points: number; played: number;
+    wins: number; draws: number; losses: number;
+    goalsFor: number; goalsAgainst: number; goalDifference: number;
+  };
 }) {
-  const toneCls =
-    tone === 'emerald' ? 'text-emerald-700 dark:text-emerald-300' :
-    tone === 'rose'    ? 'text-rose-700 dark:text-rose-300' :
-                         'text-slate-700 dark:text-slate-200';
+  const sgTone =
+    standing.goalDifference > 0 ? 'text-emerald-700 dark:text-emerald-300' :
+    standing.goalDifference < 0 ? 'text-rose-700 dark:text-rose-300'       :
+                                  'text-slate-600 dark:text-slate-300';
+
   return (
-    <div className={[
-      'rounded-lg px-2 py-1.5 text-center',
-      highlight
-        ? 'bg-gradient-to-br from-brand-500/15 to-brand-500/5 border border-brand-500/30'
-        : 'bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60',
-    ].join(' ')}>
-      <div className="text-[9px] uppercase tracking-wider text-slate-500">{label}</div>
-      <div className={`font-display tracking-wider text-lg leading-none ${toneCls}`}>{value}</div>
+    <div className="rounded-xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden bg-white/70 dark:bg-slate-800/30">
+      <table className="w-full text-center text-[12px] sm:text-sm border-separate border-spacing-0">
+        <thead>
+          <tr className="bg-slate-100/80 dark:bg-slate-800/60 text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-500">
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">Pos</th>
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">Pts</th>
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">J</th>
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">V</th>
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">E</th>
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">D</th>
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">GP</th>
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">GC</th>
+            <th className="py-1 px-0.5 sm:px-2 font-semibold">SG</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="font-semibold">
+            <td className="py-2 px-0.5 sm:px-2 font-display text-base sm:text-lg text-brand-700 dark:text-brand-300">
+              {standing.position}º
+            </td>
+            <td className="py-2 px-0.5 sm:px-2 font-display text-base sm:text-lg text-brand-700 dark:text-brand-300">
+              {standing.points}
+            </td>
+            <td className="py-2 px-0.5 sm:px-2 text-slate-700 dark:text-slate-200">{standing.played}</td>
+            <td className="py-2 px-0.5 sm:px-2 text-emerald-700 dark:text-emerald-300">{standing.wins}</td>
+            <td className="py-2 px-0.5 sm:px-2 text-slate-500">{standing.draws}</td>
+            <td className="py-2 px-0.5 sm:px-2 text-rose-700 dark:text-rose-300">{standing.losses}</td>
+            <td className="py-2 px-0.5 sm:px-2 text-slate-700 dark:text-slate-200">{standing.goalsFor}</td>
+            <td className="py-2 px-0.5 sm:px-2 text-slate-700 dark:text-slate-200">{standing.goalsAgainst}</td>
+            <td className={`py-2 px-0.5 sm:px-2 font-bold ${sgTone}`}>
+              {standing.goalDifference > 0 ? '+' : ''}{standing.goalDifference}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
 
+/**
+ * Card de partida no histórico — layout VERTICAL para garantir que a fase
+ * apareça inteira (sem truncate). Estrutura:
+ *
+ *   Grupo B — Rodada 1                          [Vitória]
+ *   Quinta-feira · 19:00 · em casa
+ *   🇨🇭 Suíça                                 1 × 2
+ *
+ * O grupo NÃO é clicável aqui — quem leva o usuário para a aba Grupos é o
+ * botão "Grupo X" abaixo do nome da seleção, no cabeçalho do modal.
+ */
 function MatchEntry({
   state, stage, date, time, opponentId, scoreLine, badge, home, secondaryInfo,
 }: {
@@ -517,28 +576,45 @@ function MatchEntry({
     badge.tone === 'rose'    ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/25' :
     badge.tone === 'brand'   ? 'bg-brand-500/15 text-brand-700 dark:text-brand-300 ring-1 ring-brand-500/25' :
                                'bg-slate-500/10 text-slate-600 dark:text-slate-300 ring-1 ring-slate-500/20';
+
+  const dayLabel = date ? formatLongDate(date) : 'Data a definir';
+
   return (
-    <li className="rounded-lg bg-slate-100/60 dark:bg-slate-800/30 px-2.5 py-1.5 flex items-center gap-2 text-sm min-w-0">
-      <div className="flex flex-col w-[88px] sm:w-[120px] shrink-0 text-[10px] uppercase tracking-wider text-slate-500">
-        <span className="font-bold text-brand-700 dark:text-brand-300 leading-tight truncate">{stage}</span>
-        <span className="font-mono text-[10px] text-slate-500">
-          {date ? formatLongDate(date).split(',')[0] : 'A definir'}{time ? ` · ${time}` : ''}
-        </span>
-        {secondaryInfo && (
-          <span className="text-[10px] text-slate-400 truncate normal-case">{secondaryInfo}</span>
-        )}
-      </div>
-      <div className="flex-1 flex items-center justify-center gap-2 min-w-0 font-semibold">
-        <span className="text-[10px] uppercase text-slate-400">{home ? 'em casa' : 'fora'}</span>
-        <span className="text-slate-300 dark:text-slate-600">·</span>
-        <Flag team={opp} size="sm" />
-        <span className="truncate">{opp?.name ?? 'A definir'}</span>
-      </div>
-      <div className="flex flex-col items-end shrink-0">
-        <span className="text-sm font-bold">{scoreLine}</span>
-        <span className={`text-[9px] font-bold uppercase rounded-full px-1.5 py-0.5 leading-none ${badgeCls}`}>
+    <li className="rounded-xl bg-slate-100/60 dark:bg-slate-800/30 border border-slate-200/60 dark:border-slate-700/50 px-3 py-2 flex flex-col gap-1 min-w-0 text-sm">
+      <div className="flex items-start justify-between gap-2 min-w-0">
+        <div className="font-bold text-brand-700 dark:text-brand-300 text-[11px] uppercase tracking-wider leading-snug min-w-0">
+          {stage}
+        </div>
+        <span className={`text-[9px] font-bold uppercase rounded-full px-1.5 py-0.5 leading-none whitespace-nowrap shrink-0 ${badgeCls}`}>
           {badge.label}
         </span>
+      </div>
+
+      <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+        <Icon icon={icons.calendar} className="text-slate-400" />
+        <span>{dayLabel}</span>
+        {time && (
+          <>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="font-mono">{time}</span>
+          </>
+        )}
+        <span className="text-slate-300 dark:text-slate-600">·</span>
+        <span className="uppercase text-[10px] tracking-wider">{home ? 'em casa' : 'fora'}</span>
+        {secondaryInfo && (
+          <>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="truncate">{secondaryInfo}</span>
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 font-semibold">
+          <Flag team={opp} size="sm" />
+          <span className="truncate">{opp?.name ?? 'A definir'}</span>
+        </div>
+        <span className="font-display tracking-wider text-base sm:text-lg shrink-0">{scoreLine}</span>
       </div>
     </li>
   );

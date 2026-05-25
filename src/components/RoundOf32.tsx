@@ -1,24 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { TournamentState } from '../types';
-import { teamById } from '../data/groups';
-import { KnockoutMatchCard } from './KnockoutMatchCard';
+import type { TournamentApi } from '../hooks/useTournament';
 import { Icon } from './Icon';
 import { icons } from '../utils/icons';
-import type { TournamentApi } from '../hooks/useTournament';
+import { MatchCard, type MatchItem } from './MatchCard';
+import { getMatchStatus } from '../logic/matchStatus';
+import { useOpenTeamDetails } from './TeamDetailsContext';
 
-// Mapeamento de slot → rótulo legível
-const SLOT_LABELS: Record<string, string> = {
-  '1A': '1º Grupo A', '1B': '1º Grupo B', '1C': '1º Grupo C', '1D': '1º Grupo D',
-  '1E': '1º Grupo E', '1F': '1º Grupo F', '1G': '1º Grupo G', '1H': '1º Grupo H',
-  '1I': '1º Grupo I', '1J': '1º Grupo J', '1K': '1º Grupo K', '1L': '1º Grupo L',
-  '2A': '2º Grupo A', '2B': '2º Grupo B', '2C': '2º Grupo C', '2D': '2º Grupo D',
-  '2E': '2º Grupo E', '2F': '2º Grupo F', '2G': '2º Grupo G', '2H': '2º Grupo H',
-  '2I': '2º Grupo I', '2J': '2º Grupo J', '2K': '2º Grupo K', '2L': '2º Grupo L',
-  '3#1': 'Melhor 3º #1', '3#2': 'Melhor 3º #2', '3#3': 'Melhor 3º #3', '3#4': 'Melhor 3º #4',
-  '3#5': 'Melhor 3º #5', '3#6': 'Melhor 3º #6', '3#7': 'Melhor 3º #7', '3#8': 'Melhor 3º #8',
-};
-
-const slotLabel = (s: string) => SLOT_LABELS[s] ?? s;
+// ---------------------------------------------------------------------------
+// Aba "16ª avos" — agora usa o MatchCard (variant="full") para ficar
+// visualmente IDÊNTICA à aba Jogos. Inclui:
+//   • placar editável (tempo normal + prorrogação + pênaltis)
+//   • decisão manual de vencedor em empates
+//   • clique no nome da seleção → abre histórico/trajetória
+//   • mesma identidade visual (badges, accent ring, footer)
+// ---------------------------------------------------------------------------
 
 interface RoundOf32Props {
   state: TournamentState;
@@ -26,10 +22,19 @@ interface RoundOf32Props {
 }
 
 export function RoundOf32({ state, api }: RoundOf32Props) {
-  const r32 = state.knockout.matches.filter((m) => m.round === 'R32');
-  const r16 = state.knockout.matches.filter((m) => m.round === 'R16');
+  const openTeam = useOpenTeamDetails();
+
+  const r32 = useMemo(() => state.knockout.matches.filter((m) => m.round === 'R32'), [state.knockout.matches]);
+  const r16 = useMemo(() => state.knockout.matches.filter((m) => m.round === 'R16'), [state.knockout.matches]);
+
   const decidedCount = r32.filter((m) => m.winnerTeamId).length;
   const anyTeamsResolved = r32.some((m) => m.homeTeamId || m.awayTeamId);
+
+  // Transforma cada KnockoutMatch em MatchItem para o MatchCard
+  const items: MatchItem[] = useMemo(() => {
+    const now = new Date();
+    return r32.map((m) => ({ match: m, type: 'knockout' as const, status: getMatchStatus(m, now) }));
+  }, [r32]);
 
   return (
     <section className="space-y-5 animate-slide-up">
@@ -60,17 +65,15 @@ export function RoundOf32({ state, api }: RoundOf32Props) {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
-        {r32.map((m) => (
-          <KnockoutMatchCard
-            key={m.id}
-            match={m}
-            home={teamById(state.groups, m.homeTeamId)}
-            away={teamById(state.groups, m.awayTeamId)}
-            slotALabel={slotLabel(m.slotA)}
-            slotBLabel={slotLabel(m.slotB)}
-            size="full"
-            onScore={(field, value) => api.setKnockoutScore(m.id, field, value)}
-            onSetManualWinner={(teamId) => api.setManualWinner(m.id, teamId)}
+        {items.map((item) => (
+          <MatchCard
+            key={(item.match as { id: string }).id}
+            variant="full"
+            item={item}
+            state={state}
+            api={api}
+            onNavigateContext={() => { /* nenhuma navegação a partir desta aba */ }}
+            onTeamClick={openTeam}
           />
         ))}
       </div>

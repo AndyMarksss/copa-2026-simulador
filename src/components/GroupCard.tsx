@@ -89,20 +89,41 @@ export const GroupCard = forwardRef<HTMLElement, GroupCardProps>(function GroupC
         </button>
       </header>
 
-      {/* -------- TABELA (sempre visível) -------- */}
-      <div className="overflow-x-auto -mx-1 px-1">
-        <table className="w-full text-[12px]">
+      {/*
+        -------- TABELA --------
+        Agora todas as 10 colunas (# · Seleção · P · J · V · E · D · GP · GC · SG)
+        ficam visíveis em qualquer tamanho. Como o grid de grupos é 1 col no
+        mobile, o card ocupa quase 100% da largura disponível — combinado com
+        fonte text-[10px], padding 0.5 e tabular-nums, tudo cabe sem scroll.
+        `table-fixed` + larguras explícitas nas estatísticas garantem que o
+        nome da seleção fique com a maior parte do espaço.
+      */}
+      <div className="-mx-1 px-1">
+        <table className="w-full text-[11px] sm:text-[12px] table-fixed tabular-nums">
+          <colgroup>
+            <col className="w-5 sm:w-6" />
+            <col />
+            <col className="w-7 sm:w-8" />
+            <col className="w-5 sm:w-7" />
+            <col className="w-5 sm:w-7" />
+            <col className="w-5 sm:w-7" />
+            <col className="w-5 sm:w-7" />
+            <col className="w-6 sm:w-8" />
+            <col className="w-6 sm:w-8" />
+            <col className="w-7 sm:w-9" />
+          </colgroup>
           <thead>
             <tr className="text-[9px] uppercase tracking-wide text-slate-500">
-              <th className="text-left py-1 font-semibold w-4">#</th>
-              <th className="text-left py-1 font-semibold">Seleção</th>
-              <th className="text-center py-1 font-semibold" title="Pontos">P</th>
-              <th className="text-center py-1 font-semibold hidden sm:table-cell" title="Jogos">J</th>
-              <th className="text-center py-1 font-semibold hidden sm:table-cell" title="Vitórias">V</th>
-              <th className="text-center py-1 font-semibold hidden sm:table-cell" title="Empates">E</th>
-              <th className="text-center py-1 font-semibold hidden sm:table-cell" title="Derrotas">D</th>
-              <th className="text-center py-1 font-semibold" title="Saldo">SG</th>
-              <th className="text-center py-1 font-semibold sm:hidden" title="Gols pró">GP</th>
+              <th className="text-left py-1 px-0.5 font-semibold">#</th>
+              <th className="text-left py-1 px-1 font-semibold">Seleção</th>
+              <th className="text-center py-1 px-0.5 font-semibold" title="Pontos">P</th>
+              <th className="text-center py-1 px-0.5 font-semibold" title="Jogos">J</th>
+              <th className="text-center py-1 px-0.5 font-semibold" title="Vitórias">V</th>
+              <th className="text-center py-1 px-0.5 font-semibold" title="Empates">E</th>
+              <th className="text-center py-1 px-0.5 font-semibold" title="Derrotas">D</th>
+              <th className="text-center py-1 px-0.5 font-semibold" title="Gols pró">GP</th>
+              <th className="text-center py-1 px-0.5 font-semibold" title="Gols contra">GC</th>
+              <th className="text-center py-1 px-0.5 font-semibold" title="Saldo">SG</th>
             </tr>
           </thead>
           <tbody>
@@ -113,11 +134,17 @@ export const GroupCard = forwardRef<HTMLElement, GroupCardProps>(function GroupC
               const isFourth = s.position === 4;
               const clickable = !!onTeamClick;
               const isHighlighted = highlightedTeamId === s.teamId;
+              const status =
+                top2
+                  ? { label: 'Classificado', tone: 'emerald' as const }
+                  : isThird
+                    ? { label: 'Em disputa',  tone: 'amber'   as const }
+                    : { label: 'Eliminada',   tone: 'rose'    as const };
               return (
                 <tr
                   key={s.teamId}
                   className={[
-                    'border-t border-slate-200/60 dark:border-slate-800/60',
+                    'border-t border-slate-200/60 dark:border-slate-800/60 leading-tight',
                     top2 ? 'bg-emerald-500/10' : '',
                     isThird ? 'bg-amber-500/10' : '',
                     isFourth ? 'bg-rose-500/5' : '',
@@ -135,39 +162,46 @@ export const GroupCard = forwardRef<HTMLElement, GroupCardProps>(function GroupC
                   } : undefined}
                   aria-label={clickable ? `Ver trajetória de ${team.name}` : undefined}
                 >
-                  <td className="py-1 font-semibold text-slate-500">{s.position}</td>
-                  <td className="py-1">
-                    <div className="flex items-center gap-1.5 min-w-0">
+                  <td className="py-1 px-0.5 font-semibold text-slate-500">{s.position}</td>
+                  <td className="py-1 px-1 min-w-0">
+                    <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+                      {/* Indicador de status (bolinha colorida) — substitui badge textual
+                          quando o espaço é apertado; o `title` traz a label completa. */}
+                      <span
+                        title={status.label}
+                        className={[
+                          'inline-block w-1.5 h-1.5 rounded-full shrink-0',
+                          status.tone === 'emerald' ? 'bg-emerald-500' :
+                          status.tone === 'amber'   ? 'bg-amber-500'   :
+                                                      'bg-rose-500',
+                        ].join(' ')}
+                        aria-label={status.label}
+                      />
                       <Flag team={team} size="sm" />
                       <span
                         className={[
                           'font-semibold truncate',
                           clickable ? 'hover:text-brand-700 dark:hover:text-brand-300 transition-colors' : '',
                         ].join(' ')}
-                        title={team.name}
+                        title={`${team.name} — ${status.label}`}
                       >
                         {team.name}
                       </span>
-                      {(top2 || isThird) && (
-                        <span className={[
-                          'inline-block w-1.5 h-1.5 rounded-full ml-auto shrink-0',
-                          top2 ? 'bg-emerald-500' : 'bg-amber-500',
-                        ].join(' ')} />
-                      )}
                     </div>
                   </td>
-                  <td className="text-center font-bold">{s.points}</td>
-                  <td className="text-center hidden sm:table-cell">{s.played}</td>
-                  <td className="text-center hidden sm:table-cell">{s.wins}</td>
-                  <td className="text-center hidden sm:table-cell">{s.draws}</td>
-                  <td className="text-center hidden sm:table-cell">{s.losses}</td>
-                  <td className={`text-center font-semibold ${
+                  <td className="text-center py-1 px-0.5 font-bold">{s.points}</td>
+                  <td className="text-center py-1 px-0.5 text-slate-600 dark:text-slate-300">{s.played}</td>
+                  <td className="text-center py-1 px-0.5 text-emerald-700 dark:text-emerald-300">{s.wins}</td>
+                  <td className="text-center py-1 px-0.5 text-slate-500">{s.draws}</td>
+                  <td className="text-center py-1 px-0.5 text-rose-700 dark:text-rose-300">{s.losses}</td>
+                  <td className="text-center py-1 px-0.5 text-slate-600 dark:text-slate-300">{s.goalsFor}</td>
+                  <td className="text-center py-1 px-0.5 text-slate-600 dark:text-slate-300">{s.goalsAgainst}</td>
+                  <td className={`text-center py-1 px-0.5 font-semibold ${
                     s.goalDifference > 0 ? 'text-emerald-600 dark:text-emerald-400'
                     : s.goalDifference < 0 ? 'text-rose-600 dark:text-rose-400' : ''
                   }`}>
                     {s.goalDifference > 0 ? '+' : ''}{s.goalDifference}
                   </td>
-                  <td className="text-center sm:hidden">{s.goalsFor}</td>
                 </tr>
               );
             })}

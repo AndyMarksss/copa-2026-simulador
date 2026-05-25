@@ -9,6 +9,8 @@ import { BracketView } from './components/BracketView';
 import { SettingsPanel } from './components/SettingsPanel';
 import { FirstAccessModal } from './components/FirstAccessModal';
 import { ToastProvider } from './components/Toast';
+import { TeamDetailsModal } from './components/TeamDetailsModal';
+import { TeamDetailsProvider } from './components/TeamDetailsContext';
 import { useTheme } from './hooks/useTheme';
 import { useTournament } from './hooks/useTournament';
 import { useFirstAccessModal } from './hooks/useFirstAccessModal';
@@ -36,6 +38,8 @@ export default function App() {
   const [highlightedMatchId, setHighlightedMatchId] = useState<string | null>(null);
   const [highlightedGroupId, setHighlightedGroupId] = useState<GroupId | null>(null);
   const [highlightedTeamId, setHighlightedTeamId] = useState<string | null>(null);
+  // Histórico/trajetória da seleção — global, abre de qualquer aba via context.
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   // Modal de primeiro acesso (com flag em localStorage).
   // O usuário também pode reabrir manualmente pela aba Configurações.
@@ -73,6 +77,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <TeamDetailsProvider open={setSelectedTeamId}>
       <div className="min-h-screen">
         <Header theme={theme} onToggleTheme={toggle} />
         <main className="mx-auto max-w-[1500px] px-4 sm:px-6 pt-3 lg:pt-4 main-pad-bottom space-y-4">
@@ -145,7 +150,22 @@ export default function App() {
 
         {/* Modal de boas-vindas — aparece automaticamente no primeiro acesso */}
         <FirstAccessModal open={firstAccess.isOpen} onClose={firstAccess.close} />
+
+        {/* Histórico/trajetória da seleção — montado uma única vez no topo,
+            portalizado em document.body para escapar de qualquer transform. */}
+        <TeamDetailsModal
+          state={api.state}
+          teamId={selectedTeamId}
+          onClose={() => setSelectedTeamId(null)}
+          onNavigateToGroup={(groupId, tId) => {
+            // Fecha o modal e navega para a aba Grupos com destaque no grupo
+            // e na linha da seleção. O navigate já dispara a animação.
+            setSelectedTeamId(null);
+            navigate('groups', { highlightGroupId: groupId, highlightTeamId: tId });
+          }}
+        />
       </div>
+      </TeamDetailsProvider>
     </ToastProvider>
   );
 }
