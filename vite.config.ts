@@ -12,6 +12,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 //     `/<repo>/`. O workflow `.github/workflows/deploy.yml` injeta
 //     automaticamente esse valor via VITE_BASE_PATH.
 // ----------------------------------------------------------------------------
+const BASE = process.env.VITE_BASE_PATH ?? '/';
+
 export default defineConfig({
   plugins: [
     react(),
@@ -21,40 +23,51 @@ export default defineConfig({
       includeAssets: [
         'Logo_copa_2026.png',
         'pwa-192x192.png',
+        'pwa-384x384.png',
         'pwa-512x512.png',
         'apple-touch-icon.png',
+        'maskable-icon-192x192.png',
         'maskable-icon-512x512.png',
       ],
       manifest: {
-        name:        'Simulador Copa do Mundo 2026',
-        short_name:  'Copa 2026',
-        description: 'Simulador interativo da Copa do Mundo FIFA 2026',
-        lang:        'pt-BR',
+        // Identificador estável — ajuda o Chrome a detectar quando o manifest
+        // mudou e regerar o WebAPK no Android (com o ícone atualizado).
+        id:           `${BASE}?source=pwa`,
+        name:         'Simulador Copa do Mundo 2026',
+        short_name:   'Copa 2026',
+        description:  'Simulador interativo da Copa do Mundo FIFA 2026 — preencha placares, simule grupos e acompanhe o mata-mata.',
+        lang:         'pt-BR',
+        dir:          'ltr',
+        start_url:    BASE,
+        scope:        BASE,
         theme_color:      '#0b1b3a',  // wc-navy
         background_color: '#060c1a',  // wc-night
-        display:     'standalone',
-        orientation: 'portrait-primary',
+        display:      'standalone',
+        orientation:  'portrait-primary',
+        categories:   ['sports', 'games', 'entertainment'],
+        // Sinalizamos que não temos app nativo (só a versão web).
+        prefer_related_applications: false,
         // Os ícones abaixo são gerados por `npm run generate-icons`:
         // canvas QUADRADO com a logo centralizada e padding interno,
         // evitando o stretch ao instalar como app.
         icons: [
           { src: 'pwa-192x192.png',           sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-384x384.png',           sizes: '384x384', type: 'image/png', purpose: 'any' },
           { src: 'pwa-512x512.png',           sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'maskable-icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
           { src: 'maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
-        // Limpa caches antigos automaticamente quando há nova versão.
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
-        // Limite generoso para os arquivos SVG das bandeiras.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       devOptions: { enabled: false },
     }),
   ],
-  base: process.env.VITE_BASE_PATH ?? '/',
+  base: BASE,
   server: {
     port: 5173,
     open: true,

@@ -126,6 +126,37 @@ export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }:
             </div>
           </div>
         )}
+
+        {/* --- DICA: Play Protect no Android --- */}
+        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 flex items-start gap-2 text-[11px] text-amber-900 dark:text-amber-200">
+          <Icon icon={icons.warning} className="text-amber-500 mt-0.5 shrink-0" />
+          <div className="min-w-0 leading-snug">
+            <div className="font-semibold">
+              Aviso do Google Play Protect no Android?
+            </div>
+            <p className="mt-0.5">
+              Se aparecer <em>"App de risco bloqueado"</em>, é uma checagem do sistema sobre PWAs em
+              geral — não há risco real, pois o simulador roda 100% no navegador. Toque em{' '}
+              <strong>"Instalar assim mesmo"</strong> e depois em <strong>"Entendi"</strong> para concluir.
+              Atualizar o Chrome para a versão mais recente também tende a remover esse aviso.
+            </p>
+          </div>
+        </div>
+
+        {/* --- DICA: ícone aparecendo esticado/desatualizado --- */}
+        <div className="mt-2 rounded-lg border border-brand-500/25 bg-brand-500/10 p-2.5 flex items-start gap-2 text-[11px] text-slate-700 dark:text-slate-300">
+          <Icon icon={icons.info} className="text-brand-500 mt-0.5 shrink-0" />
+          <div className="min-w-0 leading-snug">
+            <div className="font-semibold">
+              Ícone aparecendo esticado ou antigo?
+            </div>
+            <p className="mt-0.5">
+              O Android e o iOS guardam o ícone no momento da instalação. Se você instalou antes
+              de uma atualização visual, <strong>desinstale o app e instale de novo</strong> para
+              receber o ícone proporcional mais recente.
+            </p>
+          </div>
+        </div>
       </Card>
 
       {/* 3. SIMULAÇÕES RÁPIDAS */}
