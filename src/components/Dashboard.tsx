@@ -2,11 +2,11 @@ import React, { useMemo } from 'react';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { TournamentState, KnockoutMatch, Match } from '../types';
 import type { TournamentApi } from '../hooks/useTournament';
-import type { TabId } from './AppTabs';
+import type { NavigateFn } from '../App';
 import { matchIsPlayed } from '../logic/matches';
 import { computeGroupStandings } from '../logic/standings';
 import { computeThirdPlacedRanking } from '../logic/thirdPlaced';
-import { getMatchStatus, type AnyMatch, type MatchFilterId } from '../logic/matchStatus';
+import { getMatchStatus, type AnyMatch } from '../logic/matchStatus';
 import { ROUND_LABELS } from '../data/knockoutBracket';
 import { teamById } from '../data/groups';
 import { Flag } from './Flag';
@@ -17,7 +17,7 @@ import { useToast } from './Toast';
 interface DashboardProps {
   state: TournamentState;
   api: TournamentApi;
-  onNavigate: (tab: TabId, options?: { matchFilter?: MatchFilterId }) => void;
+  onNavigate: NavigateFn;
 }
 
 export function Dashboard({ state, api, onNavigate }: DashboardProps) {
@@ -271,6 +271,9 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
           emptyMessage="Sem partidas futuras pendentes."
           ctaLabel="Ver todos os jogos"
           onSeeAll={() => onNavigate('matches', { matchFilter: 'upcoming' })}
+          onItemClick={(matchId) =>
+            onNavigate('matches', { matchFilter: 'all', highlightMatchId: matchId })
+          }
           showScore={false}
         />
         <CompactList
@@ -281,6 +284,9 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
           emptyMessage="Nenhum resultado preenchido ainda."
           ctaLabel="Ver todos os resultados"
           onSeeAll={() => onNavigate('matches', { matchFilter: 'finished' })}
+          onItemClick={(matchId) =>
+            onNavigate('matches', { matchFilter: 'all', highlightMatchId: matchId })
+          }
           showScore={true}
         />
       </div>
@@ -295,7 +301,7 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
 function HeroSection({
   onNavigate, onSimulateGroups,
 }: {
-  onNavigate: (tab: TabId, options?: { matchFilter?: MatchFilterId }) => void;
+  onNavigate: NavigateFn;
   onSimulateGroups: () => void;
 }) {
   return (
@@ -308,13 +314,13 @@ function HeroSection({
     >
       <div className="relative z-10 max-w-2xl">
         <div className="text-[10px] uppercase tracking-widest text-brand-700 dark:text-brand-300 font-bold">
-          Copa do Mundo FIFA 2026
+          EUA · México · Canadá · 11 jun → 19 jul
         </div>
         <h2 className="font-display tracking-wider text-2xl sm:text-3xl mt-1 text-balance">
-          <span className="text-gradient-blue">Simulador Copa do Mundo 2026</span>
+          <span className="text-gradient-blue">Sua caderneta da Copa</span>
         </h2>
         <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-          Preencha resultados, acompanhe classificados e simule o mata-mata em tempo real.
+          Preencha placares, acompanhe classificados e veja o mata-mata se formar em tempo real.
         </p>
 
         {/* Grid 2x2 — em telas muito pequenas (<400px) cai para 1 coluna */}
@@ -430,11 +436,12 @@ interface CompactListProps {
   emptyMessage: string;
   ctaLabel: string;
   onSeeAll: () => void;
+  onItemClick: (matchId: string) => void;
   showScore: boolean;
 }
 
 function CompactList({
-  title, icon, items, state, emptyMessage, ctaLabel, onSeeAll, showScore,
+  title, icon, items, state, emptyMessage, ctaLabel, onSeeAll, onItemClick, showScore,
 }: CompactListProps) {
   return (
     <section className="card card-pad">
@@ -461,6 +468,7 @@ function CompactList({
               item={item}
               state={state}
               showScore={showScore}
+              onClick={() => onItemClick((item.match as { id: string }).id)}
             />
           ))}
         </ul>
@@ -470,11 +478,12 @@ function CompactList({
 }
 
 function CompactRow({
-  item, state, showScore,
+  item, state, showScore, onClick,
 }: {
   item: { match: AnyMatch; type: 'group' | 'knockout' };
   state: TournamentState;
   showScore: boolean;
+  onClick: () => void;
 }) {
   const { match, type } = item;
   const isKO = type === 'knockout';
@@ -486,30 +495,52 @@ function CompactRow({
   const stage = isKO ? ROUND_LABELS[ko!.round] : (grp!.stage ?? `Grupo ${grp!.groupId}`);
 
   return (
-    <li className="py-2 flex items-center gap-2 text-sm min-w-0">
-      <div className="flex flex-col w-14 sm:w-16 shrink-0 text-[10px] uppercase tracking-wider text-slate-500">
-        <span className="font-mono font-semibold text-slate-700 dark:text-slate-200">
-          {match.time ?? '—'}
-        </span>
-        <span className="font-bold text-brand-700 dark:text-brand-300 truncate">{stage}</span>
-      </div>
-      <div className="flex-1 flex items-center gap-2 min-w-0">
-        <span className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-          <span className="truncate font-medium text-right">{home?.name ?? '?'}</span>
-          <Flag team={home} size="sm" />
-        </span>
-        {showScore ? (
-          <span className="font-bold shrink-0 px-1">
-            {match.homeScore ?? '-'} <span className="text-slate-400 text-xs">×</span> {match.awayScore ?? '-'}
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className="
+          w-full text-left py-2.5 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3
+          text-sm min-w-0 rounded-lg px-1.5 -mx-1.5
+          hover:bg-brand-500/5 dark:hover:bg-brand-500/10
+          focus:outline-none focus:ring-2 focus:ring-brand-400/40
+          transition-colors group
+        "
+      >
+        {/* Linha 1 (mobile) / coluna esquerda (desktop): horário + fase completos */}
+        <div className="flex items-center gap-2 shrink-0 text-[10px] uppercase tracking-wider text-slate-500 min-w-0 sm:w-[160px]">
+          <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 text-[11px]">
+            {match.time ?? '—'}
           </span>
-        ) : (
-          <span className="text-slate-400 font-bold shrink-0 px-1">×</span>
-        )}
-        <span className="flex-1 flex items-center gap-1.5 min-w-0">
-          <Flag team={away} size="sm" />
-          <span className="truncate font-medium">{away?.name ?? '?'}</span>
-        </span>
-      </div>
+          <span className="text-slate-300 dark:text-slate-600">·</span>
+          <span className="font-bold text-brand-700 dark:text-brand-300 leading-tight">
+            {stage}
+          </span>
+        </div>
+
+        {/* Linha 2 (mobile) / parte direita (desktop): seleções + placar/×  */}
+        <div className="flex-1 flex items-center gap-2 min-w-0 text-[13px] sm:text-sm">
+          <span className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+            <span className="truncate font-medium text-right">{home?.name ?? '?'}</span>
+            <Flag team={home} size="sm" />
+          </span>
+          {showScore ? (
+            <span className="font-bold shrink-0 px-1">
+              {match.homeScore ?? '-'} <span className="text-slate-400 text-xs">×</span> {match.awayScore ?? '-'}
+            </span>
+          ) : (
+            <span className="text-slate-400 font-bold shrink-0 px-1">×</span>
+          )}
+          <span className="flex-1 flex items-center gap-1.5 min-w-0">
+            <Flag team={away} size="sm" />
+            <span className="truncate font-medium">{away?.name ?? '?'}</span>
+          </span>
+          <Icon
+            icon={icons.chevronRight}
+            className="text-slate-300 dark:text-slate-600 group-hover:text-brand-500 transition-colors shrink-0"
+          />
+        </div>
+      </button>
     </li>
   );
 }

@@ -34,7 +34,7 @@ export function DesktopTabs({ active, onChange }: TabsProps) {
   return (
     <nav
       role="tablist"
-      aria-label="Seções do simulador"
+      aria-label="Seções da caderneta"
       className="hidden lg:flex justify-start"
     >
       <div className="glass !rounded-full px-1.5 py-1.5 inline-flex max-w-full overflow-x-auto">

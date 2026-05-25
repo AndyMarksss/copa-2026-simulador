@@ -15,23 +15,39 @@ import { useFirstAccessModal } from './hooks/useFirstAccessModal';
 import type { MatchFilterId } from './logic/matchStatus';
 import { APP_VERSION_LABEL, APP_LAST_UPDATED, formatLastUpdated } from './config/appVersion';
 
+export interface NavigateOptions {
+  matchFilter?: MatchFilterId;
+  /** Quando informado, abre a aba `matches` e destaca o card desse jogo. */
+  highlightMatchId?: string;
+}
+
+export type NavigateFn = (next: TabId, options?: NavigateOptions) => void;
+
 export default function App() {
   const { theme, toggle } = useTheme();
   const api = useTournament();
   const [tab, setTab] = useState<TabId>('dashboard');
   const [matchFilter, setMatchFilter] = useState<MatchFilterId>('all');
+  const [highlightedMatchId, setHighlightedMatchId] = useState<string | null>(null);
 
   // Modal de primeiro acesso (com flag em localStorage).
   // O usuário também pode reabrir manualmente pela aba Configurações.
   const firstAccess = useFirstAccessModal();
 
-  // Navegação central: muda aba e opcionalmente pré-seleciona o filtro de jogos.
-  const navigate = useCallback(
-    (next: TabId, options?: { matchFilter?: MatchFilterId }) => {
+  // Navegação central: muda aba, opcionalmente pré-seleciona filtro/destaca
+  // um jogo específico (consumido por MatchesPage via highlightedMatchId).
+  const navigate = useCallback<NavigateFn>(
+    (next, options) => {
       setTab(next);
       if (options?.matchFilter) setMatchFilter(options.matchFilter);
-      // Scroll-to-top suave ao trocar de aba.
-      if (typeof window !== 'undefined') {
+      if (options?.highlightMatchId !== undefined) {
+        // Para garantir que MatchesPage perceba o "mesmo id" como novo destaque,
+        // limpamos primeiro e setamos no próximo frame.
+        setHighlightedMatchId(null);
+        requestAnimationFrame(() => setHighlightedMatchId(options.highlightMatchId ?? null));
+      }
+      if (typeof window !== 'undefined' && !options?.highlightMatchId) {
+        // Scroll-to-top apenas quando não há um card específico para focar.
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     },
@@ -53,6 +69,8 @@ export default function App() {
                 filter={matchFilter}
                 onFilterChange={setMatchFilter}
                 onNavigate={(id) => navigate(id)}
+                highlightedMatchId={highlightedMatchId}
+                onClearHighlight={() => setHighlightedMatchId(null)}
               />
             )}
             {tab === 'groups'    && <GroupStage api={api} />}
@@ -77,7 +95,7 @@ export default function App() {
               flex flex-col sm:flex-row items-center justify-center gap-x-2 gap-y-0.5 flex-wrap
             "
           >
-            <span>Simulador Copa do Mundo 2026</span>
+            <span>Copa do Mundo 2026 — Caderneta Interativa</span>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-600">·</span>
             <span className="font-mono text-brand-700 dark:text-brand-300 font-semibold">
               {APP_VERSION_LABEL}
@@ -86,13 +104,13 @@ export default function App() {
             <span>Atualizado em {formatLastUpdated(APP_LAST_UPDATED)}</span>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-600">·</span>
             <span>
-              por{' '}
+              repositório no{' '}
               <a
                 href="https://github.com/AndyMarksss/copa-2026-simulador"
                 target="_blank" rel="noreferrer"
                 className="font-semibold text-brand-700 dark:text-brand-300 hover:underline transition-colors"
               >
-                AndyMarksss
+                GitHub
               </a>
             </span>
           </footer>

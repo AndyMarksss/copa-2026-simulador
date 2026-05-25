@@ -83,7 +83,7 @@ export function FirstAccessModal({ open, onClose }: FirstAccessModalProps) {
       toast.show({
         variant: 'success',
         title: 'Aplicativo instalado!',
-        description: 'O simulador foi adicionado à sua tela inicial.',
+        description: 'A caderneta foi adicionada à sua tela inicial.',
       });
       onClose();
     } else if (outcome === 'dismissed') {
@@ -138,7 +138,7 @@ export function FirstAccessModal({ open, onClose }: FirstAccessModalProps) {
           </button>
 
           <div className="text-[10px] uppercase tracking-widest text-brand-700 dark:text-brand-300 font-bold pr-10 mb-2">
-            Bem-vindo ao Simulador Copa 2026
+            Bem-vindo à Copa do Mundo 2026
           </div>
 
           <StepIndicator current={step} />
@@ -287,7 +287,7 @@ function StepTwo({ isInstalled }: { isInstalled: boolean }) {
       </header>
 
       <p className="text-sm text-slate-600 dark:text-slate-300 leading-snug">
-        Instale o simulador no celular para acessar mais rápido, como se fosse um aplicativo.
+        Instale a caderneta no celular para acessar mais rápido, como se fosse um aplicativo.
       </p>
 
       {isInstalled ? (

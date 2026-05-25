@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { KnockoutMatch, Match, Team, TournamentState } from '../types';
 import type { TournamentApi } from '../hooks/useTournament';
@@ -7,6 +7,7 @@ import { teamById } from '../data/groups';
 import { Flag } from './Flag';
 import { Icon } from './Icon';
 import { icons } from '../utils/icons';
+import { ScoreInput } from './ScoreInput';
 import { formatLongDate } from '../data/schedule';
 import { ROUND_LABELS } from '../data/knockoutBracket';
 import {
@@ -19,7 +20,17 @@ import {
 
 // ---------------------------------------------------------------------------
 // Aba "Jogos" — concentra próximas partidas, jogos do dia, finalizados,
-// pendentes e realizados, com filtros por status.
+// pendentes e realizados. Permite EDITAR placar diretamente em cada card.
+//
+//   • Filtros em chips: flex-wrap (sem scroll horizontal no mobile)
+//   • Ordenação: ao vivo → hoje (não finalizado) → próximos → pendentes
+//                → finalizados → past (passados sem placar)
+//   • Edição inline: o card mostra/oculta inputs de placar.
+//                    Para mata-mata, abre lógica de prorrogação/pênaltis
+//                    automaticamente em caso de empate.
+//   • Destaque: quando o usuário chega aqui via navegação contextual
+//                    (clique em jogo no Dashboard), o card correspondente
+//                    rola para o centro e ganha glow temporário.
 // ---------------------------------------------------------------------------
 
 interface MatchesPageProps {
@@ -28,6 +39,10 @@ interface MatchesPageProps {
   filter: MatchFilterId;
   onFilterChange: (f: MatchFilterId) => void;
   onNavigate: (tab: TabId) => void;
+  /** Quando preenchido, rola até o card e aplica animação de destaque. */
+  highlightedMatchId?: string | null;
+  /** Chamado após a animação de destaque terminar. */
+  onClearHighlight?: () => void;
 }
 
 interface FilterDef { id: MatchFilterId; label: string; icon: IconDefinition; }
@@ -48,7 +63,21 @@ interface MatchItem {
   status: MatchStatus;
 }
 
-export function MatchesPage({ state, filter, onFilterChange, onNavigate }: MatchesPageProps) {
+// Prioridade de ordenação (menor = mais alto na lista).
+function sortPriority(s: MatchStatus): number {
+  if (s.isLive)                       return 0;
+  if (s.isToday && !s.isFinished)     return 1;
+  if (s.isUpcoming)                   return 2;
+  if (!s.isFinished && s.startMs === null) return 3; // pendentes sem data
+  if (s.isPast && !s.isFinished)      return 4;      // passou sem resultado
+  if (s.isFinished)                   return 5;
+  return 6;
+}
+
+export function MatchesPage({
+  state, api, filter, onFilterChange, onNavigate,
+  highlightedMatchId, onClearHighlight,
+}: MatchesPageProps) {
   // Coleta TODOS os jogos (grupos + mata-mata) com seus status calculados.
   const allItems = useMemo<MatchItem[]>(() => {
     const arr: MatchItem[] = [];
@@ -84,14 +113,16 @@ export function MatchesPage({ state, filter, onFilterChange, onNavigate }: Match
     [allItems, filter],
   );
 
+  // Ordena: prioridade > cronologia.
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      // "Ao vivo" sobe; depois cronológico por kickoff.
-      if (a.status.isLive && !b.status.isLive) return -1;
-      if (!a.status.isLive && b.status.isLive) return 1;
+      const pa = sortPriority(a.status);
+      const pb = sortPriority(b.status);
+      if (pa !== pb) return pa - pb;
       const as = a.status.startMs ?? Number.MAX_SAFE_INTEGER;
       const bs = b.status.startMs ?? Number.MAX_SAFE_INTEGER;
-      return as - bs;
+      if (pa <= 4) return as - bs;     // futuros/pendentes: cronológico asc
+      return bs - as;                  // finalizados: mais recentes primeiro
     });
   }, [filtered]);
 
@@ -107,8 +138,31 @@ export function MatchesPage({ state, filter, onFilterChange, onNavigate }: Match
     return out;
   }, [sorted]);
 
+  // -------- Destaque do card ao chegar via navegação contextual --------
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!highlightedMatchId || !containerRef.current) return;
+    // Espera o próximo frame para garantir que o DOM já renderizou o card.
+    const t1 = window.setTimeout(() => {
+      const el = containerRef.current?.querySelector<HTMLElement>(
+        `[data-match-id="${cssEscape(highlightedMatchId)}"]`,
+      );
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+
+    // Limpa o highlight depois que a animação termina (~2.6s).
+    const t2 = window.setTimeout(() => onClearHighlight?.(), 2800);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [highlightedMatchId, onClearHighlight]);
+
   return (
-    <section className="space-y-4 animate-slide-up">
+    <section className="space-y-4 animate-slide-up" ref={containerRef}>
       <header className="flex items-end justify-between flex-wrap gap-2">
         <div>
           <h2 className="section-title">Jogos</h2>
@@ -121,42 +175,40 @@ export function MatchesPage({ state, filter, onFilterChange, onNavigate }: Match
         </div>
       </header>
 
-      {/* Filtros — chips horizontais com rolagem suave no mobile */}
-      <div className="-mx-1 px-1 overflow-x-auto pb-1">
-        <div className="flex gap-1.5 w-max">
-          {FILTERS.map((f) => {
-            const isActive = filter === f.id;
-            const count = counts[f.id];
-            return (
-              <button
-                key={f.id}
-                onClick={() => onFilterChange(f.id)}
-                className={[
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5',
-                  'text-xs font-semibold whitespace-nowrap transition-all',
-                  isActive
-                    ? 'text-white shadow-glow bg-gradient-to-r from-brand-600 to-brand-400'
-                    : 'bg-white/70 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 hover:bg-white dark:hover:bg-slate-800/60',
-                ].join(' ')}
-              >
-                <Icon icon={f.icon} className="text-xs" />
-                {f.label}
-                {count > 0 && (
-                  <span
-                    className={[
-                      'text-[10px] rounded-full px-1.5 py-0.5 leading-none',
-                      isActive
-                        ? 'bg-white/25'
-                        : 'bg-slate-200/80 dark:bg-slate-800/80',
-                    ].join(' ')}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      {/* Filtros — chips com QUEBRA DE LINHA (sem scroll horizontal no mobile) */}
+      <div className="flex flex-wrap gap-1.5">
+        {FILTERS.map((f) => {
+          const isActive = filter === f.id;
+          const count = counts[f.id];
+          return (
+            <button
+              key={f.id}
+              onClick={() => onFilterChange(f.id)}
+              className={[
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5',
+                'text-xs font-semibold whitespace-nowrap transition-all',
+                isActive
+                  ? 'text-white shadow-glow bg-gradient-to-r from-brand-600 to-brand-400'
+                  : 'bg-white/70 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-white/5 hover:bg-white dark:hover:bg-slate-800/60',
+              ].join(' ')}
+            >
+              <Icon icon={f.icon} className="text-xs" />
+              {f.label}
+              {count > 0 && (
+                <span
+                  className={[
+                    'text-[10px] rounded-full px-1.5 py-0.5 leading-none',
+                    isActive
+                      ? 'bg-white/25'
+                      : 'bg-slate-200/80 dark:bg-slate-800/80',
+                  ].join(' ')}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Lista */}
@@ -175,7 +227,9 @@ export function MatchesPage({ state, filter, onFilterChange, onNavigate }: Match
                     key={(item.match as { id: string }).id}
                     item={item}
                     state={state}
+                    api={api}
                     onNavigate={onNavigate}
+                    isHighlighted={(item.match as { id: string }).id === highlightedMatchId}
                   />
                 ))}
               </div>
@@ -185,6 +239,11 @@ export function MatchesPage({ state, filter, onFilterChange, onNavigate }: Match
       )}
     </section>
   );
+}
+
+function cssEscape(s: string): string {
+  // Subset suficiente para nossos IDs (alfanuméricos + "-" + ":").
+  return s.replace(/"/g, '\\"');
 }
 
 // ---------------------------------------------------------------------------
@@ -216,10 +275,12 @@ function EmptyState({ filter }: { filter: MatchFilterId }) {
 interface MatchListCardProps {
   item: MatchItem;
   state: TournamentState;
+  api: TournamentApi;
   onNavigate: (tab: TabId) => void;
+  isHighlighted: boolean;
 }
 
-function MatchListCard({ item, state, onNavigate }: MatchListCardProps) {
+function MatchListCard({ item, state, api, onNavigate, isHighlighted }: MatchListCardProps) {
   const { match, type, status } = item;
   const isKO = type === 'knockout';
   const ko = isKO ? (match as KnockoutMatch) : null;
@@ -261,8 +322,19 @@ function MatchListCard({ item, state, onNavigate }: MatchListCardProps) {
     status.primary === 'finished' ? 'border-emerald-400/25' :
     status.primary === 'past'     ? 'border-amber-400/25' : '';
 
+  // ------- Estado local de edição -------
+  const [editing, setEditing] = useState(false);
+  const editable = !!(homeId && awayId);
+
   return (
-    <article className={['card card-compact !p-3 animate-fade-in flex flex-col gap-2 min-w-0', accent].join(' ')}>
+    <article
+      data-match-id={(match as { id: string }).id}
+      className={[
+        'card card-compact !p-3 animate-fade-in flex flex-col gap-2 min-w-0',
+        accent,
+        isHighlighted ? 'match-highlight' : '',
+      ].join(' ')}
+    >
       <header className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wider min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <Icon icon={icons.clock} className="text-slate-400" />
@@ -283,21 +355,235 @@ function MatchListCard({ item, state, onNavigate }: MatchListCardProps) {
         <TeamLine team={away} align="right" winner={awayIsWinner} />
       </div>
 
-      <footer className="flex items-center justify-between text-[10px] text-slate-500 gap-2 min-w-0">
+      {/* ---- Painel de edição inline ---- */}
+      {editing && editable && (
+        <ScoreEditor
+          item={item}
+          api={api}
+          onDone={() => setEditing(false)}
+        />
+      )}
+
+      <footer className="flex items-center justify-between text-[10px] text-slate-500 gap-2 min-w-0 flex-wrap">
         {match.city ? (
           <span className="flex items-center gap-1 min-w-0">
             <Icon icon={icons.location} />
             <span className="truncate">{match.city}</span>
           </span>
         ) : <span />}
-        <button
-          onClick={() => onNavigate(ctx.tab)}
-          className="inline-flex items-center gap-1 text-brand-700 dark:text-brand-300 font-semibold hover:underline shrink-0"
-        >
-          {ctx.label} <Icon icon={icons.chevronRight} />
-        </button>
+        <div className="flex items-center gap-2 ml-auto shrink-0">
+          {editable && (
+            <button
+              type="button"
+              onClick={() => setEditing((v) => !v)}
+              className={[
+                'inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 transition-colors',
+                editing
+                  ? 'bg-brand-500/15 text-brand-700 dark:text-brand-300 ring-1 ring-brand-500/30'
+                  : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700',
+              ].join(' ')}
+              aria-expanded={editing}
+            >
+              <Icon icon={editing ? icons.close : icons.simulation} />
+              {editing
+                ? 'Fechar'
+                : (status.isFinished ? 'Editar placar' : 'Preencher placar')}
+            </button>
+          )}
+          <button
+            onClick={() => onNavigate(ctx.tab)}
+            className="inline-flex items-center gap-1 text-brand-700 dark:text-brand-300 font-semibold hover:underline"
+          >
+            {ctx.label} <Icon icon={icons.chevronRight} />
+          </button>
+        </div>
       </footer>
     </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Editor inline — preenche placar (grupo OU mata-mata).
+//   Mata-mata: se houver empate no tempo normal, mostra prorrogação + pênaltis.
+// ---------------------------------------------------------------------------
+
+function ScoreEditor({
+  item, api, onDone,
+}: {
+  item: MatchItem;
+  api: TournamentApi;
+  onDone: () => void;
+}) {
+  const { match, type } = item;
+  const isKO = type === 'knockout';
+
+  if (!isKO) {
+    const m = match as Match;
+    return (
+      <div className="rounded-lg bg-slate-100/70 dark:bg-slate-800/40 px-2 py-2 flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500">
+            Editar placar — fase de grupos
+          </span>
+          {m.source && (
+            <span className="text-[9px] font-bold text-slate-500 uppercase">
+              {m.source === 'simulated' ? 'Simulado' : 'Manual'}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center justify-center gap-3">
+          <ScoreInput
+            value={m.homeScore}
+            onChange={(v) => api.setGroupMatchScore(m.groupId, m.id, v, m.awayScore)}
+            ariaLabel="Placar mandante"
+            size="md"
+          />
+          <span className="text-slate-400 text-sm font-bold">×</span>
+          <ScoreInput
+            value={m.awayScore}
+            onChange={(v) => api.setGroupMatchScore(m.groupId, m.id, m.homeScore, v)}
+            ariaLabel="Placar visitante"
+            size="md"
+          />
+        </div>
+        <div className="flex justify-end gap-2 mt-1">
+          <button
+            type="button"
+            className="text-[10px] font-semibold text-rose-600 dark:text-rose-300 hover:underline"
+            onClick={() => api.setGroupMatchScore(m.groupId, m.id, null, null)}
+          >
+            Limpar
+          </button>
+          <button
+            type="button"
+            className="text-[10px] font-semibold text-brand-700 dark:text-brand-300 hover:underline"
+            onClick={onDone}
+          >
+            Concluído
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------- Mata-mata ----------------
+  const m = match as KnockoutMatch;
+  const tied =
+    m.homeScore !== null && m.awayScore !== null && m.homeScore === m.awayScore;
+  const tiedAfterExtra =
+    tied &&
+    m.homeExtra !== null && m.awayExtra !== null &&
+    (m.homeScore ?? 0) + m.homeExtra === (m.awayScore ?? 0) + m.awayExtra;
+
+  return (
+    <div className="rounded-lg bg-slate-100/70 dark:bg-slate-800/40 px-2 py-2 flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-wider text-slate-500">
+          Editar placar — mata-mata
+        </span>
+        {m.source && (
+          <span className="text-[9px] font-bold text-slate-500 uppercase">
+            {m.source === 'simulated' ? 'Simulado' : 'Manual'}
+          </span>
+        )}
+      </div>
+
+      {/* Tempo normal */}
+      <div className="flex flex-col gap-1">
+        <span className="text-[10px] text-slate-500">Tempo normal</span>
+        <div className="flex items-center justify-center gap-3">
+          <ScoreInput
+            value={m.homeScore}
+            onChange={(v) => api.setKnockoutScore(m.id, 'home', v)}
+            ariaLabel="Placar mandante (tempo normal)"
+            size="md"
+          />
+          <span className="text-slate-400 text-sm font-bold">×</span>
+          <ScoreInput
+            value={m.awayScore}
+            onChange={(v) => api.setKnockoutScore(m.id, 'away', v)}
+            ariaLabel="Placar visitante (tempo normal)"
+            size="md"
+          />
+        </div>
+      </div>
+
+      {/* Prorrogação */}
+      {tied && (
+        <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+          <span className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold">
+            Prorrogação (gols adicionais)
+          </span>
+          <div className="flex items-center justify-center gap-3">
+            <ScoreInput
+              value={m.homeExtra}
+              onChange={(v) => api.setKnockoutScore(m.id, 'homeExtra', v)}
+              ariaLabel="Gols prorrogação mandante"
+              size="md"
+              tone="amber"
+            />
+            <span className="text-slate-400 text-sm font-bold">×</span>
+            <ScoreInput
+              value={m.awayExtra}
+              onChange={(v) => api.setKnockoutScore(m.id, 'awayExtra', v)}
+              ariaLabel="Gols prorrogação visitante"
+              size="md"
+              tone="amber"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Pênaltis */}
+      {tiedAfterExtra && (
+        <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+          <span className="text-[10px] text-rose-700 dark:text-rose-300 font-semibold">
+            Pênaltis
+          </span>
+          <div className="flex items-center justify-center gap-3">
+            <ScoreInput
+              value={m.homePens}
+              onChange={(v) => api.setKnockoutScore(m.id, 'homePens', v)}
+              ariaLabel="Pênaltis mandante"
+              size="md"
+              tone="rose"
+            />
+            <span className="text-slate-400 text-sm font-bold">×</span>
+            <ScoreInput
+              value={m.awayPens}
+              onChange={(v) => api.setKnockoutScore(m.id, 'awayPens', v)}
+              ariaLabel="Pênaltis visitante"
+              size="md"
+              tone="rose"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 mt-1">
+        <button
+          type="button"
+          className="text-[10px] font-semibold text-rose-600 dark:text-rose-300 hover:underline"
+          onClick={() => {
+            api.setKnockoutScore(m.id, 'home', null);
+            api.setKnockoutScore(m.id, 'away', null);
+            api.setKnockoutScore(m.id, 'homeExtra', null);
+            api.setKnockoutScore(m.id, 'awayExtra', null);
+            api.setKnockoutScore(m.id, 'homePens', null);
+            api.setKnockoutScore(m.id, 'awayPens', null);
+          }}
+        >
+          Limpar
+        </button>
+        <button
+          type="button"
+          className="text-[10px] font-semibold text-brand-700 dark:text-brand-300 hover:underline"
+          onClick={onDone}
+        >
+          Concluído
+        </button>
+      </div>
+    </div>
   );
 }
 

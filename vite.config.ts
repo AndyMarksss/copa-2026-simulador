@@ -33,9 +33,9 @@ export default defineConfig({
         // Identificador estável — ajuda o Chrome a detectar quando o manifest
         // mudou e regerar o WebAPK no Android (com o ícone atualizado).
         id:           `${BASE}?source=pwa`,
-        name:         'Simulador Copa do Mundo 2026',
+        name:         'Copa do Mundo 2026',
         short_name:   'Copa 2026',
-        description:  'Simulador interativo da Copa do Mundo FIFA 2026 — preencha placares, simule grupos e acompanhe o mata-mata.',
+        description:  'Caderneta interativa para acompanhar jogos, resultados, grupos e mata-mata da Copa do Mundo 2026.',
         lang:         'pt-BR',
         dir:          'ltr',
         start_url:    BASE,

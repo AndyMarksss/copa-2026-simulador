@@ -16,10 +16,13 @@ interface GroupCardProps {
   onManualOrder: (teamId: string, weight: number | null) => void;
   /** Em mobile/tablet, controla o estado inicial dos jogos. Default: true. */
   defaultExpanded?: boolean;
+  /** Quando informado, transforma cada linha da tabela em um botão clicável. */
+  onTeamClick?: (teamId: string) => void;
 }
 
 export function GroupCard({
   group, manualOrder, onSetScore, onManualOrder, defaultExpanded = true,
+  onTeamClick,
 }: GroupCardProps) {
   const standings = computeGroupStandings(group, manualOrder);
   const ties = detectUnresolvedTies(standings, group.matches, manualOrder);
@@ -90,6 +93,7 @@ export function GroupCard({
               const top2 = s.position <= 2;
               const isThird = s.position === 3;
               const isFourth = s.position === 4;
+              const clickable = !!onTeamClick;
               return (
                 <tr
                   key={s.teamId}
@@ -98,13 +102,30 @@ export function GroupCard({
                     top2 ? 'bg-emerald-500/10' : '',
                     isThird ? 'bg-amber-500/10' : '',
                     isFourth ? 'bg-rose-500/5' : '',
+                    clickable ? 'cursor-pointer hover:bg-brand-500/10' : '',
                   ].join(' ')}
+                  onClick={clickable ? () => onTeamClick!(s.teamId) : undefined}
+                  role={clickable ? 'button' : undefined}
+                  tabIndex={clickable ? 0 : undefined}
+                  onKeyDown={clickable ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onTeamClick!(s.teamId);
+                    }
+                  } : undefined}
+                  aria-label={clickable ? `Ver trajetória de ${team.name}` : undefined}
                 >
                   <td className="py-1 font-semibold text-slate-500">{s.position}</td>
                   <td className="py-1">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Flag team={team} size="sm" />
-                      <span className="font-semibold truncate" title={team.name}>
+                      <span
+                        className={[
+                          'font-semibold truncate',
+                          clickable ? 'hover:text-brand-700 dark:hover:text-brand-300 transition-colors' : '',
+                        ].join(' ')}
+                        title={team.name}
+                      >
                         {team.name}
                       </span>
                       {(top2 || isThird) && (

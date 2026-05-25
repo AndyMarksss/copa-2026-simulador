@@ -244,3 +244,39 @@
   50%      { box-shadow: 0 0 0 6px rgba(58, 161, 255, 0.30); }
 }
 .bracket-node-active { animation: connectorPulse 2.2s ease-in-out infinite; }
+
+/* ----------------------------------------------------------------------------
+ * Destaque temporário em cards após navegação contextual (Dashboard → Jogos).
+ *   Pulsa borda + glow azul/dourado por ~2.6s e desaparece suavemente.
+ * -------------------------------------------------------------------------- */
+@keyframes matchHighlight {
+  0% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0px rgba(58, 161, 255, 0.0),
+      0 0 0 0px rgba(212, 175, 55, 0.0);
+  }
+  18% {
+    transform: scale(1.02);
+    box-shadow:
+      0 0 0 4px rgba(58, 161, 255, 0.45),
+      0 0 32px 4px rgba(212, 175, 55, 0.35);
+  }
+  60% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 3px rgba(58, 161, 255, 0.32),
+      0 0 26px 3px rgba(212, 175, 55, 0.22);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0px rgba(58, 161, 255, 0.0),
+      0 0 0 0px rgba(212, 175, 55, 0.0);
+  }
+}
+.match-highlight {
+  animation: matchHighlight 2.6s cubic-bezier(.2,.9,.3,1) 1;
+  position: relative;
+  z-index: 1;
+}

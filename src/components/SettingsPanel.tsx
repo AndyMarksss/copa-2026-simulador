@@ -23,7 +23,7 @@ export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }:
   const onInstallClick = async () => {
     const outcome = await installApp();
     if (outcome === 'accepted') {
-      toast.show({ variant: 'success', title: 'Aplicativo instalado!', description: 'O simulador foi adicionado à sua tela inicial.' });
+      toast.show({ variant: 'success', title: 'Aplicativo instalado!', description: 'A caderneta foi adicionada à sua tela inicial.' });
     } else if (outcome === 'dismissed') {
       toast.show({ variant: 'info', title: 'Instalação cancelada', description: 'Você pode instalar mais tarde a qualquer momento.' });
     }
@@ -100,14 +100,14 @@ export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }:
             <div>
               <div className="font-semibold">Aplicativo já instalado</div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Você está usando o simulador como app instalado — bom proveito!
+                Você está usando a caderneta como app instalado — bom proveito!
               </p>
             </div>
           </div>
         ) : canInstall ? (
           <>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Instale o simulador no seu celular ou desktop para abrir como aplicativo, com ícone próprio e funcionamento offline.
+              Instale a caderneta no seu celular ou desktop para abrir como aplicativo, com ícone próprio e funcionamento offline.
             </p>
             <button className="btn-primary w-full sm:w-auto" onClick={onInstallClick}>
               <Icon icon={icons.mobile} />
@@ -136,7 +136,7 @@ export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }:
             </div>
             <p className="mt-0.5">
               Se aparecer <em>"App de risco bloqueado"</em>, é uma checagem do sistema sobre PWAs em
-              geral — não há risco real, pois o simulador roda 100% no navegador. Toque em{' '}
+              geral — não há risco real, pois a caderneta roda 100% no navegador. Toque em{' '}
               <strong>"Instalar assim mesmo"</strong> e depois em <strong>"Entendi"</strong> para concluir.
               Atualizar o Chrome para a versão mais recente também tende a remover esse aviso.
             </p>
@@ -240,7 +240,7 @@ export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }:
       {/* 5. RESETAR TORNEIO */}
       <Card title="Resetar torneio" icon={icons.reset}>
         <p className="text-[11px] text-slate-500">
-          Apaga todos os placares e volta o simulador ao estado inicial. Esta ação não pode ser desfeita.
+          Apaga todos os placares e volta a caderneta ao estado inicial. Esta ação não pode ser desfeita.
         </p>
         <button
           className="btn-danger w-full"

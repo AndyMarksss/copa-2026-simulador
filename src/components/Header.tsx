@@ -33,7 +33,7 @@ export function Header({ theme, onToggleTheme }: HeaderProps) {
               </span>
             </h1>
             <p className="hidden sm:block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 -mt-0.5 truncate">
-              Simulador interativo — fase de grupos &amp; mata-mata
+              Caderneta interativa — acompanhe resultados, grupos &amp; mata-mata
             </p>
           </div>
         </div>
