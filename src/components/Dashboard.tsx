@@ -91,7 +91,7 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
             </div>
             <div className="flex items-center gap-3 mt-1 min-w-0">
               <Flag team={championTeam} size="xl" />
-              <div className="font-display tracking-widest text-3xl text-gradient-gold truncate">
+              <div className="font-display tracking-widest text-2xl sm:text-3xl text-gradient-gold leading-tight text-balance">
                 {championTeam.name}
               </div>
             </div>
