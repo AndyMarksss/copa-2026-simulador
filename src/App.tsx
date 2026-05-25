@@ -13,12 +13,17 @@ import { useTheme } from './hooks/useTheme';
 import { useTournament } from './hooks/useTournament';
 import { useFirstAccessModal } from './hooks/useFirstAccessModal';
 import type { MatchFilterId } from './logic/matchStatus';
+import type { GroupId } from './types';
 import { APP_VERSION_LABEL, APP_LAST_UPDATED, formatLastUpdated } from './config/appVersion';
 
 export interface NavigateOptions {
   matchFilter?: MatchFilterId;
   /** Quando informado, abre a aba `matches` e destaca o card desse jogo. */
   highlightMatchId?: string;
+  /** Quando informado, abre a aba `groups`, expande e destaca o grupo. */
+  highlightGroupId?: GroupId;
+  /** Quando combinado com highlightGroupId, destaca também a linha da seleção. */
+  highlightTeamId?: string;
 }
 
 export type NavigateFn = (next: TabId, options?: NavigateOptions) => void;
@@ -29,25 +34,37 @@ export default function App() {
   const [tab, setTab] = useState<TabId>('dashboard');
   const [matchFilter, setMatchFilter] = useState<MatchFilterId>('all');
   const [highlightedMatchId, setHighlightedMatchId] = useState<string | null>(null);
+  const [highlightedGroupId, setHighlightedGroupId] = useState<GroupId | null>(null);
+  const [highlightedTeamId, setHighlightedTeamId] = useState<string | null>(null);
 
   // Modal de primeiro acesso (com flag em localStorage).
   // O usuário também pode reabrir manualmente pela aba Configurações.
   const firstAccess = useFirstAccessModal();
 
   // Navegação central: muda aba, opcionalmente pré-seleciona filtro/destaca
-  // um jogo específico (consumido por MatchesPage via highlightedMatchId).
+  // jogo (MatchesPage) ou grupo/seleção (GroupStage).
   const navigate = useCallback<NavigateFn>(
     (next, options) => {
       setTab(next);
       if (options?.matchFilter) setMatchFilter(options.matchFilter);
+      const hasHighlight =
+        !!(options?.highlightMatchId || options?.highlightGroupId || options?.highlightTeamId);
+
       if (options?.highlightMatchId !== undefined) {
-        // Para garantir que MatchesPage perceba o "mesmo id" como novo destaque,
-        // limpamos primeiro e setamos no próximo frame.
         setHighlightedMatchId(null);
         requestAnimationFrame(() => setHighlightedMatchId(options.highlightMatchId ?? null));
       }
-      if (typeof window !== 'undefined' && !options?.highlightMatchId) {
-        // Scroll-to-top apenas quando não há um card específico para focar.
+      if (options?.highlightGroupId !== undefined || options?.highlightTeamId !== undefined) {
+        setHighlightedGroupId(null);
+        setHighlightedTeamId(null);
+        requestAnimationFrame(() => {
+          setHighlightedGroupId(options.highlightGroupId ?? null);
+          setHighlightedTeamId(options.highlightTeamId ?? null);
+        });
+      }
+
+      if (typeof window !== 'undefined' && !hasHighlight) {
+        // Scroll-to-top apenas quando não há destino específico para focar.
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     },
@@ -73,7 +90,17 @@ export default function App() {
                 onClearHighlight={() => setHighlightedMatchId(null)}
               />
             )}
-            {tab === 'groups'    && <GroupStage api={api} />}
+            {tab === 'groups'    && (
+              <GroupStage
+                api={api}
+                highlightedGroupId={highlightedGroupId}
+                highlightedTeamId={highlightedTeamId}
+                onClearHighlight={() => {
+                  setHighlightedGroupId(null);
+                  setHighlightedTeamId(null);
+                }}
+              />
+            )}
             {tab === 'r32'       && <RoundOf32 state={api.state} api={api} />}
             {tab === 'bracket'   && <BracketView state={api.state} api={api} />}
             {tab === 'settings'  && (

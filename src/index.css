@@ -280,3 +280,58 @@
   position: relative;
   z-index: 1;
 }
+
+/* Card de grupo destacado ao navegar via clique em seleção na aba Jogos. */
+@keyframes groupHighlight {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0px rgba(58, 161, 255, 0.0);
+  }
+  20% {
+    transform: scale(1.015);
+    box-shadow:
+      0 0 0 5px rgba(58, 161, 255, 0.40),
+      0 0 38px 6px rgba(212, 175, 55, 0.30);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 3px rgba(58, 161, 255, 0.28),
+      0 0 26px 3px rgba(212, 175, 55, 0.18);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0px rgba(58, 161, 255, 0.0);
+  }
+}
+.group-highlight {
+  animation: groupHighlight 3s cubic-bezier(.2,.9,.3,1) 1;
+  position: relative;
+  z-index: 1;
+}
+
+/* Linha de seleção destacada dentro da tabela do grupo. */
+@keyframes teamRowHighlight {
+  0%, 100% { background-color: transparent; }
+  25%, 75% { background-color: rgba(58, 161, 255, 0.22); }
+}
+.team-row-highlight {
+  animation: teamRowHighlight 2.4s ease-in-out 1;
+}
+
+/* Garante respiro acima de elementos com scroll-into-view (não colam no
+   header sticky nem na navegação inferior). */
+.scroll-anchor {
+  scroll-margin-top: 92px;
+  scroll-margin-bottom: 140px;
+}
+
+/* ----------------------------------------------------------------------------
+ * Bottom sheet (modais mobile-first).
+ *   Slide a partir do bottom no mobile, pop-in central no desktop.
+ * -------------------------------------------------------------------------- */
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-sheet-up { animation: sheetSlideUp 0.32s cubic-bezier(.2,.9,.3,1) both; }

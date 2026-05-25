@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { forwardRef, useEffect, useState } from 'react';
 import type { Group, GroupId, Match } from '../types';
 import { computeGroupStandings } from '../logic/standings';
 import { detectUnresolvedTies } from '../logic/tiebreakers';
@@ -18,12 +18,18 @@ interface GroupCardProps {
   defaultExpanded?: boolean;
   /** Quando informado, transforma cada linha da tabela em um botão clicável. */
   onTeamClick?: (teamId: string) => void;
+  /** Quando informado, destaca temporariamente a linha dessa seleção. */
+  highlightedTeamId?: string | null;
+  /** Quando true, força a expansão do card (sobrescreve estado local). */
+  forceExpanded?: boolean;
+  /** Quando true, aplica animação de destaque ao card inteiro. */
+  highlighted?: boolean;
 }
 
-export function GroupCard({
+export const GroupCard = forwardRef<HTMLElement, GroupCardProps>(function GroupCard({
   group, manualOrder, onSetScore, onManualOrder, defaultExpanded = true,
-  onTeamClick,
-}: GroupCardProps) {
+  onTeamClick, highlightedTeamId, forceExpanded, highlighted,
+}, ref) {
   const standings = computeGroupStandings(group, manualOrder);
   const ties = detectUnresolvedTies(standings, group.matches, manualOrder);
   const played = group.matches.filter(matchIsPlayed).length;
@@ -34,8 +40,20 @@ export function GroupCard({
   // Estado de expansão usado apenas em mobile/tablet (<lg).
   const [expanded, setExpanded] = useState<boolean>(defaultExpanded);
 
+  // Se forceExpanded chegar como true, garante que o card mobile esteja aberto.
+  useEffect(() => {
+    if (forceExpanded) setExpanded(true);
+  }, [forceExpanded]);
+
   return (
-    <article className="card card-compact animate-fade-in flex flex-col">
+    <article
+      ref={ref}
+      className={[
+        'card card-compact animate-fade-in flex flex-col scroll-anchor',
+        highlighted ? 'group-highlight' : '',
+      ].join(' ')}
+      data-group-id={group.id}
+    >
       {/* -------- HEADER -------- */}
       <header
         className="
@@ -94,6 +112,7 @@ export function GroupCard({
               const isThird = s.position === 3;
               const isFourth = s.position === 4;
               const clickable = !!onTeamClick;
+              const isHighlighted = highlightedTeamId === s.teamId;
               return (
                 <tr
                   key={s.teamId}
@@ -103,6 +122,7 @@ export function GroupCard({
                     isThird ? 'bg-amber-500/10' : '',
                     isFourth ? 'bg-rose-500/5' : '',
                     clickable ? 'cursor-pointer hover:bg-brand-500/10' : '',
+                    isHighlighted ? 'team-row-highlight' : '',
                   ].join(' ')}
                   onClick={clickable ? () => onTeamClick!(s.teamId) : undefined}
                   role={clickable ? 'button' : undefined}
@@ -207,7 +227,7 @@ export function GroupCard({
       </div>
     </article>
   );
-}
+});
 
 // ----------------------------------------------------------------------------
 // Lista de jogos do grupo

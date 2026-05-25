@@ -1,18 +1,18 @@
 import React, { useMemo } from 'react';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { TournamentState, KnockoutMatch, Match } from '../types';
+import type { TournamentState } from '../types';
 import type { TournamentApi } from '../hooks/useTournament';
 import type { NavigateFn } from '../App';
 import { matchIsPlayed } from '../logic/matches';
 import { computeGroupStandings } from '../logic/standings';
 import { computeThirdPlacedRanking } from '../logic/thirdPlaced';
-import { getMatchStatus, type AnyMatch } from '../logic/matchStatus';
-import { ROUND_LABELS } from '../data/knockoutBracket';
+import { getMatchStatus } from '../logic/matchStatus';
 import { teamById } from '../data/groups';
 import { Flag } from './Flag';
 import { Icon } from './Icon';
 import { icons } from '../utils/icons';
 import { useToast } from './Toast';
+import { MatchCard, type MatchItem } from './MatchCard';
 
 interface DashboardProps {
   state: TournamentState;
@@ -50,9 +50,9 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
   const koProgress = (koTotal / 30) * 100;
 
   // --------- coleta de jogos para o resumo ---------
-  const allMatchesWithStatus = useMemo(() => {
+  const allMatchesWithStatus = useMemo<MatchItem[]>(() => {
     const now = new Date();
-    const arr: Array<{ match: AnyMatch; type: 'group' | 'knockout'; status: ReturnType<typeof getMatchStatus> }> = [];
+    const arr: MatchItem[] = [];
     for (const g of state.groups) {
       for (const m of g.matches) arr.push({ match: m, type: 'group', status: getMatchStatus(m, now) });
     }
@@ -274,7 +274,6 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
           onItemClick={(matchId) =>
             onNavigate('matches', { matchFilter: 'all', highlightMatchId: matchId })
           }
-          showScore={false}
         />
         <CompactList
           title="Últimos resultados"
@@ -287,7 +286,6 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
           onItemClick={(matchId) =>
             onNavigate('matches', { matchFilter: 'all', highlightMatchId: matchId })
           }
-          showScore={true}
         />
       </div>
     </section>
@@ -431,17 +429,16 @@ function ShortcutButton({
 interface CompactListProps {
   title: string;
   icon: IconDefinition;
-  items: Array<{ match: AnyMatch; type: 'group' | 'knockout' }>;
+  items: MatchItem[];
   state: TournamentState;
   emptyMessage: string;
   ctaLabel: string;
   onSeeAll: () => void;
   onItemClick: (matchId: string) => void;
-  showScore: boolean;
 }
 
 function CompactList({
-  title, icon, items, state, emptyMessage, ctaLabel, onSeeAll, onItemClick, showScore,
+  title, icon, items, state, emptyMessage, ctaLabel, onSeeAll, onItemClick,
 }: CompactListProps) {
   return (
     <section className="card card-pad">
@@ -461,86 +458,18 @@ function CompactList({
       {items.length === 0 ? (
         <p className="text-sm text-slate-500">{emptyMessage}</p>
       ) : (
-        <ul className="divide-y divide-slate-200/50 dark:divide-slate-800/50">
+        <div className="flex flex-col gap-2">
           {items.map((item) => (
-            <CompactRow
+            <MatchCard
               key={(item.match as { id: string }).id}
+              variant="compact"
               item={item}
               state={state}
-              showScore={showScore}
               onClick={() => onItemClick((item.match as { id: string }).id)}
             />
           ))}
-        </ul>
+        </div>
       )}
     </section>
-  );
-}
-
-function CompactRow({
-  item, state, showScore, onClick,
-}: {
-  item: { match: AnyMatch; type: 'group' | 'knockout' };
-  state: TournamentState;
-  showScore: boolean;
-  onClick: () => void;
-}) {
-  const { match, type } = item;
-  const isKO = type === 'knockout';
-  const ko = isKO ? (match as KnockoutMatch) : null;
-  const grp = !isKO ? (match as Match) : null;
-
-  const home = teamById(state.groups, isKO ? ko!.homeTeamId : grp!.homeTeamId);
-  const away = teamById(state.groups, isKO ? ko!.awayTeamId : grp!.awayTeamId);
-  const stage = isKO ? ROUND_LABELS[ko!.round] : (grp!.stage ?? `Grupo ${grp!.groupId}`);
-
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onClick}
-        className="
-          w-full text-left py-2.5 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3
-          text-sm min-w-0 rounded-lg px-1.5 -mx-1.5
-          hover:bg-brand-500/5 dark:hover:bg-brand-500/10
-          focus:outline-none focus:ring-2 focus:ring-brand-400/40
-          transition-colors group
-        "
-      >
-        {/* Linha 1 (mobile) / coluna esquerda (desktop): horário + fase completos */}
-        <div className="flex items-center gap-2 shrink-0 text-[10px] uppercase tracking-wider text-slate-500 min-w-0 sm:w-[160px]">
-          <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 text-[11px]">
-            {match.time ?? '—'}
-          </span>
-          <span className="text-slate-300 dark:text-slate-600">·</span>
-          <span className="font-bold text-brand-700 dark:text-brand-300 leading-tight">
-            {stage}
-          </span>
-        </div>
-
-        {/* Linha 2 (mobile) / parte direita (desktop): seleções + placar/×  */}
-        <div className="flex-1 flex items-center gap-2 min-w-0 text-[13px] sm:text-sm">
-          <span className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-            <span className="truncate font-medium text-right">{home?.name ?? '?'}</span>
-            <Flag team={home} size="sm" />
-          </span>
-          {showScore ? (
-            <span className="font-bold shrink-0 px-1">
-              {match.homeScore ?? '-'} <span className="text-slate-400 text-xs">×</span> {match.awayScore ?? '-'}
-            </span>
-          ) : (
-            <span className="text-slate-400 font-bold shrink-0 px-1">×</span>
-          )}
-          <span className="flex-1 flex items-center gap-1.5 min-w-0">
-            <Flag team={away} size="sm" />
-            <span className="truncate font-medium">{away?.name ?? '?'}</span>
-          </span>
-          <Icon
-            icon={icons.chevronRight}
-            className="text-slate-300 dark:text-slate-600 group-hover:text-brand-500 transition-colors shrink-0"
-          />
-        </div>
-      </button>
-    </li>
   );
 }

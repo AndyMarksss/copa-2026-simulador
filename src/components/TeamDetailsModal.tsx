@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import type { KnockoutMatch, Team, TournamentState } from '../types';
 import { teamById } from '../data/groups';
 import { computeGroupStandings } from '../logic/standings';
@@ -11,18 +12,14 @@ import { Icon } from './Icon';
 import { icons } from '../utils/icons';
 
 // ---------------------------------------------------------------------------
-// TeamDetailsModal — mostra histórico e trajetória de uma seleção.
+// TeamDetailsModal — histórico e trajetória da seleção.
 //
-//   • Dados básicos: grupo, posição, pontos, V/E/D, GP/GC, saldo, status
-//   • Jogos já realizados: placar + resultado (V/E/D)
-//   • Próximos jogos: oponentes pendentes na fase de grupos
-//   • Trajetória no mata-mata: confrontos já definidos / em que fase parou
-//   • Mensagens contextuais sobre status (classificada, melhor 3º, campeã etc.)
-//
-// Visual:
-//   • Mobile: bottom-sheet rolável a partir de baixo
-//   • Desktop: modal central
-//   • Fechamento via ESC, clique no backdrop ou no botão "X"
+//   • PORTAL para document.body → escapa de qualquer ancestor com transform
+//     (animações), garantindo que `position: fixed` ancore na viewport e
+//     o modal apareça imediatamente visível (não no fim da página).
+//   • Mobile (< sm): bottom sheet (slide-up, rounded-t-3xl, safe-area).
+//   • ≥ sm: modal central (pop-in, rounded-2xl).
+//   • Body scroll travado enquanto aberto.
 // ---------------------------------------------------------------------------
 
 interface TeamDetailsModalProps {
@@ -59,38 +56,27 @@ interface KnockoutAppearance {
   opponentId: string | null;
   date?: string;
   time?: string;
-  status:
-    | 'pending'   // sem placar
-    | 'won'       // venceu
-    | 'lost';     // perdeu
+  status: 'pending' | 'won' | 'lost';
   scoreLine?: string;
 }
 
 export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalProps) {
-  // Fecha com ESC
+  // ESC + scroll lock
   useEffect(() => {
     if (!teamId) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [teamId, onClose]);
-
-  // Trava scroll do fundo
-  useEffect(() => {
-    if (!teamId) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     const original = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = original;
+      window.removeEventListener('keydown', onKey);
     };
-  }, [teamId]);
+  }, [teamId, onClose]);
 
   const team = teamId ? teamById(state.groups, teamId) : undefined;
   const group = team ? state.groups.find((g) => g.id === team.groupId) : undefined;
 
-  // Tabela do grupo (com manualTiebreakers aplicados) e posição da seleção.
   const standings = useMemo(
     () => (group ? computeGroupStandings(group, state.manualTiebreakers) : []),
     [group, state.manualTiebreakers],
@@ -100,48 +86,49 @@ export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalPro
     [standings, teamId],
   );
 
-  // Ranking dos melhores terceiros (saber se o time é melhor-3º qualificado).
   const thirdsResult = useMemo(
     () => computeThirdPlacedRanking(state.groups, state.manualTiebreakers),
     [state.groups, state.manualTiebreakers],
   );
   const thirdEntry = thirdsResult.ranking.find((e) => e.teamId === teamId) ?? null;
 
-  // Jogos de grupo — separa em "jogados" e "próximos".
-  const groupPlayed: PlayedGame[] = [];
-  const groupUpcoming: UpcomingGroupGame[] = [];
-  if (team && group) {
-    for (const m of group.matches) {
-      const involved = m.homeTeamId === team.id || m.awayTeamId === team.id;
-      if (!involved) continue;
-      const isHome = m.homeTeamId === team.id;
-      const opponentId = isHome ? m.awayTeamId : m.homeTeamId;
-      if (matchIsPlayed(m)) {
-        const scored = (isHome ? m.homeScore : m.awayScore) as number;
-        const conceded = (isHome ? m.awayScore : m.homeScore) as number;
-        const result: PlayedGame['result'] =
-          scored > conceded ? 'win' :
-          scored < conceded ? 'loss' : 'draw';
-        groupPlayed.push({
-          matchId: m.id,
-          date: m.date, time: m.time,
-          stage: m.stage ?? `Grupo ${m.groupId}`,
-          opponentId, scored, conceded, result, home: isHome,
-        });
-      } else {
-        groupUpcoming.push({
-          matchId: m.id,
-          date: m.date, time: m.time,
-          stage: m.stage ?? `Grupo ${m.groupId}`,
-          opponentId, home: isHome, city: m.city,
-        });
+  const { groupPlayed, groupUpcoming } = useMemo(() => {
+    const played: PlayedGame[] = [];
+    const upcoming: UpcomingGroupGame[] = [];
+    if (team && group) {
+      for (const m of group.matches) {
+        const involved = m.homeTeamId === team.id || m.awayTeamId === team.id;
+        if (!involved) continue;
+        const isHome = m.homeTeamId === team.id;
+        const opponentId = isHome ? m.awayTeamId : m.homeTeamId;
+        if (matchIsPlayed(m)) {
+          const scored = (isHome ? m.homeScore : m.awayScore) as number;
+          const conceded = (isHome ? m.awayScore : m.homeScore) as number;
+          const result: PlayedGame['result'] =
+            scored > conceded ? 'win' :
+            scored < conceded ? 'loss' : 'draw';
+          played.push({
+            matchId: m.id,
+            date: m.date, time: m.time,
+            stage: m.stage ?? `Grupo ${m.groupId}`,
+            opponentId, scored, conceded, result, home: isHome,
+          });
+        } else {
+          upcoming.push({
+            matchId: m.id,
+            date: m.date, time: m.time,
+            stage: m.stage ?? `Grupo ${m.groupId}`,
+            opponentId, home: isHome, city: m.city,
+          });
+        }
       }
     }
-  }
+    return { groupPlayed: played, groupUpcoming: upcoming };
+  }, [team, group]);
 
-  // Trajetória no mata-mata para essa seleção.
-  const koAppearances: KnockoutAppearance[] = [];
-  if (team) {
+  const koAppearances = useMemo<KnockoutAppearance[]>(() => {
+    if (!team) return [];
+    const arr: KnockoutAppearance[] = [];
     for (const m of state.knockout.matches) {
       const involved = m.homeTeamId === team.id || m.awayTeamId === team.id;
       if (!involved) continue;
@@ -162,50 +149,55 @@ export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalPro
         }
         return main;
       })();
-      koAppearances.push({
+      arr.push({
         matchId: m.id, round: m.round, opponentId,
         date: m.date, time: m.time,
         status, scoreLine,
       });
     }
-  }
+    return arr;
+  }, [state.knockout.matches, team]);
 
-  // Mensagem contextual de trajetória.
   const trajectory = useMemo(
     () => buildTrajectoryMessage(state, team, myStanding, thirdEntry, koAppearances),
     [state, team, myStanding, thirdEntry, koAppearances],
   );
 
-  if (!team) return null;
+  if (!team || typeof document === 'undefined') return null;
 
-  return (
+  const modal = (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="team-modal-title"
       onClick={onClose}
       className="
-        fixed inset-0 z-[55]
+        fixed inset-0 z-[9999]
         flex items-end sm:items-center justify-center
         bg-slate-900/70 dark:bg-black/70 backdrop-blur-sm
         p-0 sm:p-4
-        animate-fade-in
       "
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="
           w-full sm:max-w-2xl
-          rounded-t-2xl sm:rounded-2xl
+          rounded-t-3xl sm:rounded-2xl
           border border-white/60 dark:border-white/5
           bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl
           ring-1 ring-brand-400/30 dark:ring-brand-400/20
           shadow-[0_30px_80px_-20px_rgba(11,27,58,0.5)]
-          max-h-[90vh] flex flex-col relative animate-pop-in
+          max-h-[88vh] sm:max-h-[85vh]
+          flex flex-col relative
+          animate-sheet-up sm:animate-pop-in
         "
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
+        {/* "Pegador" do bottom sheet — apenas mobile */}
+        <div className="sm:hidden w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mt-2.5" aria-hidden />
+
         {/* ============== HEADER ============== */}
-        <header className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-5 pb-3 relative">
+        <header className="shrink-0 px-4 sm:px-6 pt-3 sm:pt-5 pb-3 relative border-b border-slate-200/60 dark:border-slate-800/60">
           <button
             type="button"
             aria-label="Fechar histórico"
@@ -240,8 +232,7 @@ export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalPro
         </header>
 
         {/* ============== CONTEÚDO ============== */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-6 space-y-5">
-          {/* --- Estatísticas no grupo --- */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 space-y-5">
           {myStanding && (
             <section>
               <SectionTitle icon={icons.groups} title="No grupo" />
@@ -276,7 +267,6 @@ export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalPro
             </section>
           )}
 
-          {/* --- Jogos já realizados --- */}
           <section>
             <SectionTitle icon={icons.recent} title="Histórico de partidas" />
             {groupPlayed.length === 0 && koAppearances.filter((a) => a.status !== 'pending').length === 0 ? (
@@ -325,7 +315,6 @@ export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalPro
             )}
           </section>
 
-          {/* --- Próximos jogos --- */}
           {(groupUpcoming.length > 0 || koAppearances.some((a) => a.status === 'pending' && a.opponentId)) && (
             <section>
               <SectionTitle icon={icons.calendar} title="Próximos confrontos" />
@@ -366,6 +355,8 @@ export function TeamDetailsModal({ state, teamId, onClose }: TeamDetailsModalPro
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
 
 // ---------------------------------------------------------------------------
@@ -387,7 +378,6 @@ function buildTrajectoryMessage(
 ): TrajectoryMessage {
   if (!team || !standing) return { status: null, tone: 'brand', icon: icons.info };
 
-  // Campeã / vice / 3º lugar / eliminada no mata-mata
   const finalMatch = state.knockout.matches.find((m) => m.round === 'F');
   if (finalMatch?.winnerTeamId === team.id) {
     return {
@@ -412,7 +402,6 @@ function buildTrajectoryMessage(
     };
   }
 
-  // Trajetória nas eliminatórias
   const lostIn = koAppearances.find((a) => a.status === 'lost');
   if (lostIn) {
     return {
@@ -432,7 +421,6 @@ function buildTrajectoryMessage(
     };
   }
 
-  // Fase de grupos — depende da posição e se o grupo já fechou.
   const groupComplete = state.groups
     .find((g) => g.id === team.groupId)
     ?.matches.every(matchIsPlayed) ?? false;
@@ -555,4 +543,3 @@ function MatchEntry({
     </li>
   );
 }
-
