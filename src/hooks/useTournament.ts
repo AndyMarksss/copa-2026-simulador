@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Group, GroupId, KnockoutMatch, KnockoutRound, TournamentState } from '../types';
 import { createInitialGroups, reconcileWithInitialMeta, teamById } from '../data/groups';
 import { createEmptyBracket } from '../data/knockoutBracket';
+import { applyKnockoutSchedule } from '../data/schedule';
 import { computeGroupStandings } from '../logic/standings';
 import { detectUnresolvedTies } from '../logic/tiebreakers';
 import { recalculateKnockout } from '../logic/knockout';
@@ -20,7 +21,9 @@ function createInitialState(): TournamentState {
   return {
     version: STATE_VERSION,
     groups: createInitialGroups(),
-    knockout: { matches: createEmptyBracket() },
+    // Aplica o calendário oficial já na carga (datas/horários/cidades/estádios)
+    // para que o mata-mata não apareça com "Data a definir" antes do 1º recálculo.
+    knockout: { matches: applyKnockoutSchedule(createEmptyBracket()) },
     manualTiebreakers: {},
   };
 }
@@ -42,11 +45,15 @@ function migrate(state: TournamentState): TournamentState {
     groups: reconciledGroups,
     knockout: state.knockout?.matches?.length
       ? {
-          matches: state.knockout.matches.map((m) => ({
-            ...m,
-            manualWinnerTeamId: m.manualWinnerTeamId ?? null,
-            source: m.source,
-          })),
+          // Reaplica o calendário oficial (data/hora/cidade/estádio) preservando
+          // placares, prorrogação, pênaltis, vencedor e source de cada partida.
+          matches: applyKnockoutSchedule(
+            state.knockout.matches.map((m) => ({
+              ...m,
+              manualWinnerTeamId: m.manualWinnerTeamId ?? null,
+              source: m.source,
+            })),
+          ),
         }
       : base.knockout,
     manualTiebreakers: state.manualTiebreakers ?? {},

@@ -128,11 +128,18 @@ export function reconcileWithInitialMeta(savedGroups: Group[]): Group[] {
     if (!saved) return freshGroup;
     return {
       ...freshGroup,
-      // Preserva placares (e datas customizadas) por id de partida.
+      // Preserva placares e a origem (manual/simulado) por id de partida,
+      // mas adota o calendário oficial mais recente (date/time/city/stadium/stage)
+      // que vem de `freshGroup` via applyGroupSchedule.
       matches: freshGroup.matches.map((m) => {
         const savedMatch = saved.matches.find((sm) => sm.id === m.id);
         if (!savedMatch) return m;
-        return { ...m, homeScore: savedMatch.homeScore, awayScore: savedMatch.awayScore };
+        return {
+          ...m,
+          homeScore: savedMatch.homeScore,
+          awayScore: savedMatch.awayScore,
+          source: savedMatch.source,
+        };
       }),
     };
   });
