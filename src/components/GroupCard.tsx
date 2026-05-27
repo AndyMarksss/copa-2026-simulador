@@ -91,26 +91,26 @@ export const GroupCard = forwardRef<HTMLElement, GroupCardProps>(function GroupC
 
       {/*
         -------- TABELA --------
-        Agora todas as 10 colunas (# · Seleção · P · J · V · E · D · GP · GC · SG)
-        ficam visíveis em qualquer tamanho. Como o grid de grupos é 1 col no
-        mobile, o card ocupa quase 100% da largura disponível — combinado com
-        fonte text-[10px], padding 0.5 e tabular-nums, tudo cabe sem scroll.
-        `table-fixed` + larguras explícitas nas estatísticas garantem que o
-        nome da seleção fique com a maior parte do espaço.
+        Todas as 10 colunas (# · Seleção · P · J · V · E · D · GP · GC · SG)
+        ficam visíveis em qualquer tamanho. As colunas numéricas têm largura
+        fixa e enxuta (tabular-nums); a coluna "Seleção" fica com TODO o espaço
+        restante e o nome QUEBRA em duas linhas quando necessário (sem truncate),
+        garantindo leitura de nomes longos como "Bósnia e Herzegovina" ou
+        "Coreia do Sul", especialmente no desktop.
       */}
       <div className="-mx-1 px-1">
         <table className="w-full text-[11px] sm:text-[12px] table-fixed tabular-nums">
           <colgroup>
-            <col className="w-5 sm:w-6" />
+            <col className="w-5" />
             <col />
-            <col className="w-7 sm:w-8" />
-            <col className="w-5 sm:w-7" />
-            <col className="w-5 sm:w-7" />
-            <col className="w-5 sm:w-7" />
-            <col className="w-5 sm:w-7" />
-            <col className="w-6 sm:w-8" />
-            <col className="w-6 sm:w-8" />
-            <col className="w-7 sm:w-9" />
+            <col className="w-6 lg:w-7" />
+            <col className="w-5 lg:w-6" />
+            <col className="w-5 lg:w-6" />
+            <col className="w-5 lg:w-6" />
+            <col className="w-5 lg:w-6" />
+            <col className="w-6 lg:w-7" />
+            <col className="w-6 lg:w-7" />
+            <col className="w-7 lg:w-8" />
           </colgroup>
           <thead>
             <tr className="text-[9px] uppercase tracking-wide text-slate-500">
@@ -164,7 +164,7 @@ export const GroupCard = forwardRef<HTMLElement, GroupCardProps>(function GroupC
                 >
                   <td className="py-1 px-0.5 font-semibold text-slate-500">{s.position}</td>
                   <td className="py-1 px-1 min-w-0">
-                    <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       {/* Indicador de status (bolinha colorida) — substitui badge textual
                           quando o espaço é apertado; o `title` traz a label completa. */}
                       <span
@@ -180,7 +180,7 @@ export const GroupCard = forwardRef<HTMLElement, GroupCardProps>(function GroupC
                       <Flag team={team} size="sm" />
                       <span
                         className={[
-                          'font-semibold truncate',
+                          'font-semibold leading-tight min-w-0',
                           clickable ? 'hover:text-brand-700 dark:hover:text-brand-300 transition-colors' : '',
                         ].join(' ')}
                         title={`${team.name} — ${status.label}`}

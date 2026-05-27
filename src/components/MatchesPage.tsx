@@ -159,8 +159,14 @@ export function MatchesPage({
             Próximas partidas, jogos do dia, resultados finalizados e pendentes — tudo em um só lugar.
           </p>
         </div>
-        <div className="text-xs text-slate-500">
-          {sorted.length} jogo{sorted.length === 1 ? '' : 's'} no filtro atual
+        <div className="flex flex-col items-end gap-0.5">
+          <div className="text-xs text-slate-500">
+            {sorted.length} jogo{sorted.length === 1 ? '' : 's'} no filtro atual
+          </div>
+          <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 dark:text-slate-500">
+            <Icon icon={icons.clock} className="text-[9px]" />
+            Horários de Brasília
+          </span>
         </div>
       </header>
 

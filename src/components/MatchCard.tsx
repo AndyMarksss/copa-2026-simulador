@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { KnockoutMatch, Match, Team, TournamentState } from '../types';
 import type { TournamentApi } from '../hooks/useTournament';
 import type { TabId } from './AppTabs';
@@ -141,8 +141,6 @@ export function MatchCard(props: MatchCardProps) {
       awayIsWinner={!!awayIsWinner}
       homeScore={homeScore}
       awayScore={awayScore}
-      homePens={homePens}
-      awayPens={awayPens}
       source={source}
       api={props.api}
       onNavigateContext={props.onNavigateContext}
@@ -170,8 +168,6 @@ interface FullProps {
   awayIsWinner: boolean;
   homeScore: number | null;
   awayScore: number | null;
-  homePens: number | null;
-  awayPens: number | null;
   source?: 'manual' | 'simulated';
   api: TournamentApi;
   onNavigateContext: (tab: TabId) => void;
@@ -182,45 +178,60 @@ function FullMatchCard({
   item, accent, isHighlighted,
   stage, time, home, away, homeId, awayId,
   homeIsWinner, awayIsWinner,
-  homeScore, awayScore, homePens, awayPens, source,
+  homeScore, awayScore, source,
   api, onNavigateContext, onTeamClick,
 }: FullProps) {
   const { match, type, status } = item;
   const isKO = type === 'knockout';
   const ko = isKO ? (match as KnockoutMatch) : null;
-
-  const [editing, setEditing] = useState(false);
+  const grp = !isKO ? (match as Match) : null;
   const editable = !!(homeId && awayId);
 
-  // Navegação contextual (botão à direita do footer)
+  // Navegação contextual (link no rodapé)
   const ctx = isKO
     ? (ko!.round === 'R32'
         ? { label: 'Ver nos 16ª avos', tab: 'r32' as TabId }
         : { label: 'Ver no chaveamento', tab: 'bracket' as TabId })
     : { label: 'Ver no grupo', tab: 'groups' as TabId };
 
-  // O clique no nome da seleção abre o histórico/trajetória — vale para
-  // jogos de grupo E mata-mata (qualquer time tem trajetória completa).
+  // Dispara a edição do placar no estado global (fonte única de verdade).
+  const setHome = (v: number | null) =>
+    isKO ? api.setKnockoutScore(ko!.id, 'home', v)
+         : api.setGroupMatchScore(grp!.groupId, grp!.id, v, grp!.awayScore);
+  const setAway = (v: number | null) =>
+    isKO ? api.setKnockoutScore(ko!.id, 'away', v)
+         : api.setGroupMatchScore(grp!.groupId, grp!.id, grp!.homeScore, v);
+
+  // Mata-mata: detecta necessidade de prorrogação / pênaltis.
+  const tied = isKO && homeScore !== null && awayScore !== null && homeScore === awayScore;
+  const tiedAfterExtra =
+    !!tied && isKO &&
+    ko!.homeExtra !== null && ko!.awayExtra !== null &&
+    (homeScore ?? 0) + ko!.homeExtra === (awayScore ?? 0) + ko!.awayExtra;
+
   return (
     <article
       data-match-id={(match as { id: string }).id}
       className={[
-        'card card-compact !p-3 animate-fade-in flex flex-col gap-2 min-w-0',
+        'card card-compact !p-3 animate-fade-in flex flex-col gap-2.5 min-w-0',
         accent,
         isHighlighted ? 'match-highlight' : '',
       ].join(' ')}
     >
       <CardHeader stage={stage} time={time} status={status} source={source} />
 
+      {/* Linha principal: seleção · inputs de placar · seleção (sempre visíveis) */}
       <div className="flex items-center gap-2 text-sm min-w-0">
         <TeamLine
           team={home} align="left" winner={homeIsWinner}
           onClick={homeId ? () => onTeamClick(homeId) : undefined}
         />
-        <ScoreCenter
-          finished={status.isFinished}
-          homeScore={homeScore} awayScore={awayScore}
-          homePens={homePens} awayPens={awayPens}
+        <InlineScore
+          editable={editable}
+          homeScore={homeScore}
+          awayScore={awayScore}
+          onHome={setHome}
+          onAway={setAway}
         />
         <TeamLine
           team={away} align="right" winner={awayIsWinner}
@@ -228,49 +239,58 @@ function FullMatchCard({
         />
       </div>
 
-      {editing && editable && (
-        <ScoreEditor
-          item={item} api={api}
-          homeCode={home?.code} awayCode={away?.code}
-          onDone={() => setEditing(false)}
+      {/* Mata-mata empatado → prorrogação / pênaltis / decisão manual (auto) */}
+      {isKO && editable && tied && (
+        <KnockoutExtras
+          ko={ko!}
+          api={api}
+          homeCode={home?.code}
+          awayCode={away?.code}
+          showPens={tiedAfterExtra}
         />
       )}
 
-      <footer className="flex items-center justify-between text-[10px] text-slate-500 gap-2 min-w-0 flex-wrap">
+      <footer className="flex items-center justify-between text-[10px] text-slate-500 gap-2 min-w-0">
         {match.city ? (
           <span className="flex items-center gap-1 min-w-0">
             <Icon icon={icons.location} />
             <span className="truncate">{match.city}</span>
           </span>
         ) : <span />}
-        <div className="flex items-center gap-2 ml-auto shrink-0">
-          {editable && (
-            <button
-              type="button"
-              onClick={() => setEditing((v) => !v)}
-              className={[
-                'inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 transition-colors',
-                editing
-                  ? 'bg-brand-500/15 text-brand-700 dark:text-brand-300 ring-1 ring-brand-500/30'
-                  : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700',
-              ].join(' ')}
-              aria-expanded={editing}
-            >
-              <Icon icon={editing ? icons.close : icons.simulation} />
-              {editing
-                ? 'Fechar'
-                : (status.isFinished ? 'Editar placar' : 'Preencher placar')}
-            </button>
-          )}
-          <button
-            onClick={() => onNavigateContext(ctx.tab)}
-            className="inline-flex items-center gap-1 text-brand-700 dark:text-brand-300 font-semibold hover:underline"
-          >
-            {ctx.label} <Icon icon={icons.chevronRight} />
-          </button>
-        </div>
+        <button
+          onClick={() => onNavigateContext(ctx.tab)}
+          className="inline-flex items-center gap-1 text-brand-700 dark:text-brand-300 font-semibold hover:underline shrink-0"
+        >
+          {ctx.label} <Icon icon={icons.chevronRight} />
+        </button>
       </footer>
     </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Placar inline (sempre visível na aba Jogos)
+// ---------------------------------------------------------------------------
+
+function InlineScore({
+  editable, homeScore, awayScore, onHome, onAway,
+}: {
+  editable: boolean;
+  homeScore: number | null;
+  awayScore: number | null;
+  onHome: (v: number | null) => void;
+  onAway: (v: number | null) => void;
+}) {
+  if (!editable) {
+    // Jogo sem times definidos (mata-mata futuro): placeholder neutro.
+    return <span className="text-xs text-slate-400 font-bold shrink-0 px-1.5">×</span>;
+  }
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <ScoreInput value={homeScore} onChange={onHome} ariaLabel="Placar mandante" size="md" />
+      <span className="text-slate-400 text-xs font-bold">×</span>
+      <ScoreInput value={awayScore} onChange={onAway} ariaLabel="Placar visitante" size="md" />
+    </div>
   );
 }
 
@@ -433,196 +453,106 @@ function StatusBadge({
 }
 
 // ---------------------------------------------------------------------------
-// Editor inline (apenas variant="full")
+// Extras do mata-mata (prorrogação · pênaltis · decisão manual)
+//   Aparece automaticamente abaixo do placar quando o jogo está empatado.
+//   O placar do tempo normal fica nos inputs centrais (InlineScore).
 // ---------------------------------------------------------------------------
 
-function ScoreEditor({
-  item, api, onDone, homeCode, awayCode,
+function KnockoutExtras({
+  ko, api, homeCode, awayCode, showPens,
 }: {
-  item: MatchItem;
+  ko: KnockoutMatch;
   api: TournamentApi;
-  onDone: () => void;
   homeCode?: string;
   awayCode?: string;
+  showPens: boolean;
 }) {
-  const { match, type } = item;
-  const isKO = type === 'knockout';
-
-  if (!isKO) {
-    const m = match as Match;
-    return (
-      <div className="rounded-lg bg-slate-100/70 dark:bg-slate-800/40 px-2 py-2 flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] uppercase tracking-wider text-slate-500">
-            Editar placar — fase de grupos
-          </span>
-          {m.source && (
-            <span className="text-[9px] font-bold text-slate-500 uppercase">
-              {m.source === 'simulated' ? 'Simulado' : 'Manual'}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center justify-center gap-3">
-          <ScoreInput
-            value={m.homeScore}
-            onChange={(v) => api.setGroupMatchScore(m.groupId, m.id, v, m.awayScore)}
-            ariaLabel="Placar mandante"
-            size="md"
-          />
-          <span className="text-slate-400 text-sm font-bold">×</span>
-          <ScoreInput
-            value={m.awayScore}
-            onChange={(v) => api.setGroupMatchScore(m.groupId, m.id, m.homeScore, v)}
-            ariaLabel="Placar visitante"
-            size="md"
-          />
-        </div>
-        <div className="flex justify-end gap-2 mt-1">
-          <button
-            type="button"
-            className="text-[10px] font-semibold text-rose-600 dark:text-rose-300 hover:underline"
-            onClick={() => api.setGroupMatchScore(m.groupId, m.id, null, null)}
-          >
-            Limpar
-          </button>
-          <button
-            type="button"
-            className="text-[10px] font-semibold text-brand-700 dark:text-brand-300 hover:underline"
-            onClick={onDone}
-          >
-            Concluído
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const m = match as KnockoutMatch;
-  const tied =
-    m.homeScore !== null && m.awayScore !== null && m.homeScore === m.awayScore;
-  const tiedAfterExtra =
-    tied &&
-    m.homeExtra !== null && m.awayExtra !== null &&
-    (m.homeScore ?? 0) + m.homeExtra === (m.awayScore ?? 0) + m.awayExtra;
-
-  // Home/away cached para usar nos botões de decisão manual
-  const homeT = m.homeTeamId;
-  const awayT = m.awayTeamId;
+  const homeT = ko.homeTeamId;
+  const awayT = ko.awayTeamId;
 
   return (
-    <div className="rounded-lg bg-slate-100/70 dark:bg-slate-800/40 px-2 py-2 flex flex-col gap-2">
+    <div className="rounded-lg bg-slate-100/70 dark:bg-slate-800/40 px-2.5 py-2 flex flex-col gap-2 text-[11px]">
+      {/* Prorrogação */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] uppercase tracking-wider text-slate-500">
-          Editar placar — mata-mata
+        <span className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300 font-semibold">
+          Prorrogação
         </span>
-        {m.source && (
-          <span className="text-[9px] font-bold text-slate-500 uppercase">
-            {m.source === 'simulated' ? 'Simulado' : 'Manual'}
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <span className="text-[10px] text-slate-500">Tempo normal</span>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center gap-1.5">
           <ScoreInput
-            value={m.homeScore}
-            onChange={(v) => api.setKnockoutScore(m.id, 'home', v)}
-            ariaLabel="Placar mandante (tempo normal)"
-            size="md"
+            value={ko.homeExtra}
+            onChange={(v) => api.setKnockoutScore(ko.id, 'homeExtra', v)}
+            ariaLabel="Gols prorrogação mandante"
+            size="sm"
+            tone="amber"
           />
-          <span className="text-slate-400 text-sm font-bold">×</span>
+          <span className="text-slate-400 text-xs font-bold">×</span>
           <ScoreInput
-            value={m.awayScore}
-            onChange={(v) => api.setKnockoutScore(m.id, 'away', v)}
-            ariaLabel="Placar visitante (tempo normal)"
-            size="md"
+            value={ko.awayExtra}
+            onChange={(v) => api.setKnockoutScore(ko.id, 'awayExtra', v)}
+            ariaLabel="Gols prorrogação visitante"
+            size="sm"
+            tone="amber"
           />
         </div>
       </div>
 
-      {tied && (
-        <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-          <span className="text-[10px] text-amber-700 dark:text-amber-300 font-semibold">
-            Prorrogação (gols adicionais)
-          </span>
-          <div className="flex items-center justify-center gap-3">
-            <ScoreInput
-              value={m.homeExtra}
-              onChange={(v) => api.setKnockoutScore(m.id, 'homeExtra', v)}
-              ariaLabel="Gols prorrogação mandante"
-              size="md"
-              tone="amber"
-            />
-            <span className="text-slate-400 text-sm font-bold">×</span>
-            <ScoreInput
-              value={m.awayExtra}
-              onChange={(v) => api.setKnockoutScore(m.id, 'awayExtra', v)}
-              ariaLabel="Gols prorrogação visitante"
-              size="md"
-              tone="amber"
-            />
-          </div>
-        </div>
-      )}
-
-      {tiedAfterExtra && (
-        <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-          <span className="text-[10px] text-rose-700 dark:text-rose-300 font-semibold">
+      {/* Pênaltis (quando o agregado segue empatado após a prorrogação) */}
+      {showPens && (
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+          <span className="text-[10px] uppercase tracking-wider text-rose-700 dark:text-rose-300 font-semibold">
             Pênaltis
           </span>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center gap-1.5">
             <ScoreInput
-              value={m.homePens}
-              onChange={(v) => api.setKnockoutScore(m.id, 'homePens', v)}
+              value={ko.homePens}
+              onChange={(v) => api.setKnockoutScore(ko.id, 'homePens', v)}
               ariaLabel="Pênaltis mandante"
-              size="md"
+              size="sm"
               tone="rose"
             />
-            <span className="text-slate-400 text-sm font-bold">×</span>
+            <span className="text-slate-400 text-xs font-bold">×</span>
             <ScoreInput
-              value={m.awayPens}
-              onChange={(v) => api.setKnockoutScore(m.id, 'awayPens', v)}
+              value={ko.awayPens}
+              onChange={(v) => api.setKnockoutScore(ko.id, 'awayPens', v)}
               ariaLabel="Pênaltis visitante"
-              size="md"
+              size="sm"
               tone="rose"
             />
           </div>
         </div>
       )}
 
-      {/* Decisão manual de vencedor (necessária quando os pênaltis também empatam
-          ou quando o usuário quer sobrescrever a decisão automática). */}
-      {(tied || tiedAfterExtra) && homeT && awayT && (
-        <div className="flex flex-col gap-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+      {/* Decisão manual de vencedor (override, útil em empate total) */}
+      {homeT && awayT && (
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex-wrap">
           <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
-            Definir vencedor manualmente
+            Vencedor
           </span>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => api.setManualWinner(m.id, homeT)}
+              onClick={() => api.setManualWinner(ko.id, homeT)}
               className={[
                 'btn-soft !py-1 !px-2 text-[11px]',
-                m.manualWinnerTeamId === homeT ? 'ring-2 ring-brand-500' : '',
+                ko.manualWinnerTeamId === homeT ? 'ring-2 ring-brand-500' : '',
               ].join(' ')}
             >
               {homeCode ?? 'Mandante'}
             </button>
             <button
               type="button"
-              onClick={() => api.setManualWinner(m.id, awayT)}
+              onClick={() => api.setManualWinner(ko.id, awayT)}
               className={[
                 'btn-soft !py-1 !px-2 text-[11px]',
-                m.manualWinnerTeamId === awayT ? 'ring-2 ring-brand-500' : '',
+                ko.manualWinnerTeamId === awayT ? 'ring-2 ring-brand-500' : '',
               ].join(' ')}
             >
               {awayCode ?? 'Visitante'}
             </button>
-            {m.manualWinnerTeamId && (
+            {ko.manualWinnerTeamId && (
               <button
                 type="button"
-                onClick={() => api.setManualWinner(m.id, null)}
+                onClick={() => api.setManualWinner(ko.id, null)}
                 className="btn-ghost !py-1 !px-2 text-[11px]"
               >
                 limpar
@@ -631,30 +561,6 @@ function ScoreEditor({
           </div>
         </div>
       )}
-
-      <div className="flex justify-end gap-2 mt-1">
-        <button
-          type="button"
-          className="text-[10px] font-semibold text-rose-600 dark:text-rose-300 hover:underline"
-          onClick={() => {
-            api.setKnockoutScore(m.id, 'home', null);
-            api.setKnockoutScore(m.id, 'away', null);
-            api.setKnockoutScore(m.id, 'homeExtra', null);
-            api.setKnockoutScore(m.id, 'awayExtra', null);
-            api.setKnockoutScore(m.id, 'homePens', null);
-            api.setKnockoutScore(m.id, 'awayPens', null);
-          }}
-        >
-          Limpar
-        </button>
-        <button
-          type="button"
-          className="text-[10px] font-semibold text-brand-700 dark:text-brand-300 hover:underline"
-          onClick={onDone}
-        >
-          Concluído
-        </button>
-      </div>
     </div>
   );
 }

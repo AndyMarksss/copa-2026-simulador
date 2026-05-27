@@ -101,17 +101,7 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
           </button>
         </div>
       ) : (
-        <HeroSection
-          onNavigate={onNavigate}
-          onSimulateGroups={() => {
-            const n = api.simulateGroups();
-            toast.show({
-              variant: n > 0 ? 'success' : 'warn',
-              title: n > 0 ? `${n} jogo(s) simulado(s) nos grupos` : 'Nada a simular nos grupos',
-              description: n > 0 ? 'Tabelas e melhores 3ºs atualizados.' : 'Todos os jogos já estão preenchidos.',
-            });
-          }}
-        />
+        <HeroSection onNavigate={onNavigate} />
       )}
 
       {/* ============== STAT CARDS ============== */}
@@ -296,12 +286,7 @@ export function Dashboard({ state, api, onNavigate }: DashboardProps) {
 // HeroSection — apresenta o simulador antes de haver um campeão
 // ---------------------------------------------------------------------------
 
-function HeroSection({
-  onNavigate, onSimulateGroups,
-}: {
-  onNavigate: NavigateFn;
-  onSimulateGroups: () => void;
-}) {
+function HeroSection({ onNavigate }: { onNavigate: NavigateFn }) {
   return (
     <section
       className="
@@ -310,29 +295,35 @@ function HeroSection({
         border-brand-500/30
       "
     >
-      <div className="relative z-10 max-w-2xl">
+      <div className="relative z-10 lg:max-w-4xl">
         <div className="text-[10px] uppercase tracking-widest text-brand-700 dark:text-brand-300 font-bold">
           EUA · México · Canadá · 11 jun → 19 jul
         </div>
         <h2 className="font-display tracking-wider text-2xl sm:text-3xl mt-1 text-balance">
           <span className="text-gradient-blue">Sua caderneta da Copa</span>
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+        <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 max-w-2xl">
           Preencha placares, acompanhe classificados e veja o mata-mata se formar em tempo real.
         </p>
 
-        {/* Grid 2x2 — em telas muito pequenas (<400px) cai para 1 coluna */}
-        <div className="mt-3 grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 sm:gap-3 sm:max-w-md">
-          <button className="btn-primary w-full" onClick={() => onNavigate('groups')}>
+        {/*
+          Mobile: grid 2x2 (1 coluna em telas < 400px).
+          Desktop (lg+): botões em uma linha horizontal, com largura natural.
+        */}
+        <div className="mt-4 grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 sm:gap-3 lg:flex lg:flex-row lg:flex-wrap lg:items-center">
+          <button className="btn-primary w-full lg:w-auto" onClick={() => onNavigate('groups')}>
             <Icon icon={icons.groups} /> Ver grupos
           </button>
-          <button className="btn-soft w-full" onClick={() => onNavigate('matches')}>
+          <button className="btn-soft w-full lg:w-auto" onClick={() => onNavigate('matches')}>
             <Icon icon={icons.matches} /> Ver jogos
           </button>
-          <button className="btn-soft w-full" onClick={onSimulateGroups}>
-            <Icon icon={icons.simulation} /> Simular grupos
+          <button
+            className="btn-soft w-full lg:w-auto"
+            onClick={() => onNavigate('settings', { highlightSimulations: true })}
+          >
+            <Icon icon={icons.simulation} /> Simulações
           </button>
-          <button className="btn-gold w-full" onClick={() => onNavigate('bracket')}>
+          <button className="btn-gold w-full lg:w-auto" onClick={() => onNavigate('bracket')}>
             <Icon icon={icons.bracket} /> Ver chaveamento
           </button>
         </div>

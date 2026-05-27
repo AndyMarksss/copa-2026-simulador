@@ -26,6 +26,8 @@ export interface NavigateOptions {
   highlightGroupId?: GroupId;
   /** Quando combinado com highlightGroupId, destaca também a linha da seleção. */
   highlightTeamId?: string;
+  /** Quando true, abre Configurações e destaca a seção "Simulações rápidas". */
+  highlightSimulations?: boolean;
 }
 
 export type NavigateFn = (next: TabId, options?: NavigateOptions) => void;
@@ -38,6 +40,8 @@ export default function App() {
   const [highlightedMatchId, setHighlightedMatchId] = useState<string | null>(null);
   const [highlightedGroupId, setHighlightedGroupId] = useState<GroupId | null>(null);
   const [highlightedTeamId, setHighlightedTeamId] = useState<string | null>(null);
+  // Nonce que dispara o destaque da seção "Simulações rápidas" em Configurações.
+  const [simHighlightNonce, setSimHighlightNonce] = useState(0);
   // Histórico/trajetória da seleção — global, abre de qualquer aba via context.
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
@@ -66,8 +70,12 @@ export default function App() {
           setHighlightedTeamId(options.highlightTeamId ?? null);
         });
       }
+      if (options?.highlightSimulations) {
+        // Incrementa o nonce → SettingsPanel rola e destaca a seção de simulações.
+        setSimHighlightNonce((n) => n + 1);
+      }
 
-      if (typeof window !== 'undefined' && !hasHighlight) {
+      if (typeof window !== 'undefined' && !hasHighlight && !options?.highlightSimulations) {
         // Scroll-to-top apenas quando não há destino específico para focar.
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -114,6 +122,7 @@ export default function App() {
                 theme={theme}
                 onToggleTheme={toggle}
                 onShowInstructions={firstAccess.open}
+                highlightSimulationsNonce={simHighlightNonce}
               />
             )}
           </div>

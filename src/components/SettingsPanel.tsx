@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { TournamentApi } from '../hooks/useTournament';
 import { downloadJson, uploadJson } from '../logic/storage';
@@ -14,10 +14,27 @@ interface SettingsPanelProps {
   onToggleTheme: () => void;
   /** Reabre o modal de "Como usar" (sem apagar a flag do localStorage). */
   onShowInstructions?: () => void;
+  /** Quando muda (>0), rola até e destaca a seção "Simulações rápidas". */
+  highlightSimulationsNonce?: number;
 }
 
-export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }: SettingsPanelProps) {
+export function SettingsPanel({
+  api, theme, onToggleTheme, onShowInstructions, highlightSimulationsNonce = 0,
+}: SettingsPanelProps) {
   const toast = useToast();
+  const simulationsRef = useRef<HTMLDivElement | null>(null);
+  const [simHighlighted, setSimHighlighted] = React.useState(false);
+
+  // Rola até a seção de simulações e aplica o destaque temporário.
+  useEffect(() => {
+    if (!highlightSimulationsNonce) return;
+    const t1 = window.setTimeout(() => {
+      simulationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setSimHighlighted(true);
+    }, 80);
+    const t2 = window.setTimeout(() => setSimHighlighted(false), 3000);
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
+  }, [highlightSimulationsNonce]);
   const { canInstall, isInstalled, installApp } = useInstallPWA();
 
   const onInstallClick = async () => {
@@ -160,7 +177,7 @@ export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }:
       </Card>
 
       {/* 3. SIMULAÇÕES RÁPIDAS */}
-      <Card title="Simulações rápidas" icon={icons.simulation}>
+      <Card title="Simulações rápidas" icon={icons.simulation} cardRef={simulationsRef} highlighted={simHighlighted}>
         <p className="text-[11px] text-slate-500">
           Geram placares plausíveis baseados no ranking FIFA. Resultados manuais nunca são sobrescritos.
         </p>
@@ -279,9 +296,23 @@ export function SettingsPanel({ api, theme, onToggleTheme, onShowInstructions }:
 // Sub-componentes
 // ----------------------------------------------------------------------------
 
-function Card({ title, icon, children }: { title: string; icon: IconDefinition; children: React.ReactNode }) {
+function Card({
+  title, icon, children, cardRef, highlighted,
+}: {
+  title: string;
+  icon: IconDefinition;
+  children: React.ReactNode;
+  cardRef?: React.Ref<HTMLDivElement>;
+  highlighted?: boolean;
+}) {
   return (
-    <div className="card card-pad flex flex-col gap-2">
+    <div
+      ref={cardRef}
+      className={[
+        'card card-pad flex flex-col gap-2 scroll-anchor',
+        highlighted ? 'group-highlight' : '',
+      ].join(' ')}
+    >
       <h3 className="font-display tracking-wider text-lg flex items-center gap-2">
         <Icon icon={icon} className="text-brand-500" />
         {title}
